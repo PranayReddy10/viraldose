@@ -45,6 +45,15 @@ class PostRequest extends FormRequest
             'source_name' => ['nullable', 'string', 'max:120'],
             'source_url' => ['nullable', 'url', 'max:255'],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'language' => ['nullable', 'string', 'max:10'],
+            'scheduled' => ['nullable', 'boolean'],
+            'save_as' => ['nullable', 'in:draft,publish'],
+            'gallery' => ['nullable', 'array', 'max:12'],
+            'gallery.*' => ['image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
+            'files' => ['nullable', 'array', 'max:5'],
+            'files.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,txt,csv', 'max:20480'],
+            'image_captions' => ['nullable', 'array'],
+            'image_captions.*' => ['nullable', 'string', 'max:300'],
         ];
     }
 
@@ -59,6 +68,7 @@ class PostRequest extends FormRequest
             'allow_comments' => $this->boolean('allow_comments'),
             'noindex' => $this->boolean('noindex'),
             'remove_image' => $this->boolean('remove_image'),
+            'scheduled' => $this->boolean('scheduled'),
         ]);
     }
 }

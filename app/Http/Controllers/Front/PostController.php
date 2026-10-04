@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Front;
 use App\Http\Controllers\Controller;
 use App\Models\Page;
 use App\Models\Post;
+use App\Models\PostFile;
 use App\Services\Seo;
 use App\Support\PostUrl;
 use Illuminate\Http\Request;
@@ -51,9 +52,17 @@ class PostController extends Controller
         return $this->render($request, $seo, $post);
     }
 
+    public function download(PostFile $file)
+    {
+        abort_unless($file->post && $file->post->isPublished(), 404);
+        PostFile::withoutTimestamps(fn () => $file->increment('downloads'));
+
+        return redirect()->away($file->url());
+    }
+
     private function findPublished(string $slug, Request $request): ?Post
     {
-        $query = Post::query()->with(['category.parent', 'author', 'tags']);
+        $query = Post::query()->with(['category.parent', 'author', 'tags', 'images', 'files']);
         $user = $request->user();
         if ($user && $user->is_active && $request->has('preview')) {
             // Logged-in staff may preview drafts/scheduled posts.

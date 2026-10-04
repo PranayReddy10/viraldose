@@ -180,7 +180,7 @@ class AdminTest extends TestCase
 
         $this->actingAs($admin)->put('/admin/settings', [
             'site_name' => 'ViralDose Test', 'posts_per_page' => 10, 'post_url_format' => 'flat',
-            'organization_type' => 'NewsMediaOrganization', 'language' => 'en',
+            'organization_type' => 'NewsMediaOrganization', 'language' => 'en', 'storage_driver' => 'public',
         ])->assertRedirect();
         $this->assertSame('ViralDose Test', site_name());
 

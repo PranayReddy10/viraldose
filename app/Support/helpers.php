@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Setting;
+use App\Services\ImageService;
 use Illuminate\Support\Str;
 
 if (! function_exists('setting')) {
@@ -23,11 +24,8 @@ if (! function_exists('media_url')) {
         if (blank($path)) {
             return null;
         }
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '//')) {
-            return $path;
-        }
 
-        return asset('storage/'.ltrim($path, '/'));
+        return ImageService::publicUrl($path);
     }
 }
 

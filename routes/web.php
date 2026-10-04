@@ -37,6 +37,8 @@ Route::get('/sitemap-pages.xml', [Front\SitemapController::class, 'pages'])->nam
 Route::get('/sitemap-authors.xml', [Front\SitemapController::class, 'authors'])->name('sitemap.authors');
 Route::get('/news-sitemap.xml', [Front\SitemapController::class, 'news'])->name('sitemap.news');
 Route::get('/robots.txt', [Front\SitemapController::class, 'robots'])->name('robots');
+Route::get('/{key}.txt', [Front\SitemapController::class, 'indexNowKey'])->where('key', '[a-f0-9]{32}')->name('indexnow.key');
+Route::get('/download/{file}', [Front\PostController::class, 'download'])->whereNumber('file')->name('post.file.download');
 Route::get('/ads.txt', [Front\SitemapController::class, 'adsTxt'])->name('ads.txt');
 
 /*
@@ -62,6 +64,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('posts/{id}/restore', [Admin\PostController::class, 'restore'])->whereNumber('id')->name('posts.restore');
         Route::delete('posts/{id}/force', [Admin\PostController::class, 'forceDelete'])->whereNumber('id')->name('posts.force');
         Route::resource('posts', Admin\PostController::class)->except(['show']);
+        Route::delete('post-images/{image}', [Admin\PostController::class, 'destroyImage'])->name('posts.images.destroy');
+        Route::delete('post-files/{file}', [Admin\PostController::class, 'destroyFile'])->name('posts.files.destroy');
+        Route::post('posts/{post}/inspect', [Admin\GoogleController::class, 'inspect'])->name('posts.inspect');
+        Route::post('posts/{post}/request-indexing', [Admin\GoogleController::class, 'requestIndexing'])->name('posts.index-request');
         Route::post('media/upload', [Admin\MediaController::class, 'upload'])->name('media.upload');
 
         // Editors + admins
@@ -71,6 +77,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::resource('pages', Admin\PageController::class)->except(['show']);
             Route::post('comments/bulk', [Admin\CommentController::class, 'bulk'])->name('comments.bulk');
             Route::resource('comments', Admin\CommentController::class)->only(['index', 'update', 'destroy']);
+
+            // RSS feed import
+            Route::post('feeds/preview', [Admin\RssFeedController::class, 'preview'])->name('feeds.preview');
+            Route::post('feeds/{feed}/fetch', [Admin\RssFeedController::class, 'fetch'])->name('feeds.fetch');
+            Route::resource('feeds', Admin\RssFeedController::class)->except(['show']);
+
+            // Google Search Console / Indexing / Analytics
+            Route::get('google', [Admin\GoogleController::class, 'index'])->name('google.index');
+            Route::post('google/test', [Admin\GoogleController::class, 'test'])->name('google.test');
+            Route::post('google/sitemaps', [Admin\GoogleController::class, 'submitSitemaps'])->name('google.sitemaps');
+            Route::post('google/bulk-index', [Admin\GoogleController::class, 'bulkIndex'])->name('google.bulk');
+            Route::post('google/refresh', [Admin\GoogleController::class, 'refresh'])->name('google.refresh');
         });
 
         // Admins only
@@ -81,6 +99,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::resource('redirects', Admin\RedirectController::class)->only(['index', 'store', 'destroy']);
             Route::get('settings', [Admin\SettingController::class, 'edit'])->name('settings.edit');
             Route::put('settings', [Admin\SettingController::class, 'update'])->name('settings.update');
+            Route::post('settings/test-storage', [Admin\SettingController::class, 'testStorage'])->name('settings.test-storage');
             Route::get('subscribers/export', [Admin\SubscriberController::class, 'export'])->name('subscribers.export');
             Route::resource('subscribers', Admin\SubscriberController::class)->only(['index', 'destroy']);
             Route::resource('messages', Admin\MessageController::class)->only(['index', 'show', 'destroy']);

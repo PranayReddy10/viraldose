@@ -14,3 +14,6 @@ Schedule::call(function () {
     // Scheduled posts become visible automatically (published_at <= now); just bust caches on the hour.
     Post::flushCache();
 })->everyFifteenMinutes()->name('flush-home-cache');
+
+Schedule::command('feeds:import')->hourly()->withoutOverlapping();
+Schedule::command('posts:ping')->everyFifteenMinutes()->withoutOverlapping();

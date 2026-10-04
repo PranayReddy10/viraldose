@@ -31,7 +31,8 @@ class Post extends Model
         'user_id', 'category_id', 'title', 'slug', 'excerpt', 'content', 'image', 'image_alt', 'image_caption',
         'status', 'published_at', 'is_featured', 'is_breaking', 'is_slider', 'is_recommended', 'allow_comments',
         'meta_title', 'meta_description', 'meta_keywords', 'canonical_url', 'noindex', 'reading_time',
-        'source_name', 'source_url', 'legacy_id',
+        'source_name', 'source_url', 'legacy_id', 'language', 'rss_feed_id', 'feed_guid',
+        'index_status', 'index_coverage', 'index_checked_at', 'last_crawled_at', 'indexing_requested_at',
     ];
 
     protected function casts(): array
@@ -46,6 +47,9 @@ class Post extends Model
             'noindex' => 'boolean',
             'views' => 'integer',
             'reading_time' => 'integer',
+            'index_checked_at' => 'datetime',
+            'last_crawled_at' => 'datetime',
+            'indexing_requested_at' => 'datetime',
         ];
     }
 
@@ -123,6 +127,26 @@ class Post extends Model
     public function viewLogs(): HasMany
     {
         return $this->hasMany(PostView::class);
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(PostImage::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function files(): HasMany
+    {
+        return $this->hasMany(PostFile::class)->orderBy('id');
+    }
+
+    public function feed(): BelongsTo
+    {
+        return $this->belongsTo(RssFeed::class, 'rss_feed_id');
+    }
+
+    public function indexingLogs(): HasMany
+    {
+        return $this->hasMany(IndexingLog::class)->latest('created_at');
     }
 
     // Scopes

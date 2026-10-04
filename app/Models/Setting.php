@@ -59,7 +59,22 @@ class Setting extends Model
             'publisher_logo' => '',
             'google_news_publication_name' => 'ViralDose',
             'language' => 'en',
+            'languages' => 'en:English,hi:Hindi,te:Telugu,ta:Tamil',
             'timezone_display' => 'Asia/Kolkata',
+            // Storage
+            'storage_driver' => 'public',
+            'spaces_key' => '',
+            'spaces_secret' => '',
+            'spaces_region' => 'blr1',
+            'spaces_bucket' => '',
+            'spaces_endpoint' => 'https://blr1.digitaloceanspaces.com',
+            'spaces_cdn_url' => '',
+            // Google & indexing
+            'google_sc_site_url' => '',
+            'ga4_property_id' => '',
+            'google_auto_index' => 1,
+            'indexnow_enabled' => 1,
+            'indexnow_key' => '',
         ];
     }
 
@@ -109,5 +124,23 @@ class Setting extends Model
     public static function flush(): void
     {
         Cache::forget(self::CACHE_KEY);
+    }
+
+    /**
+     * Site languages as code => label, from the "languages" setting.
+     *
+     * @return array<string, string>
+     */
+    public static function languages(): array
+    {
+        $out = [];
+        foreach (explode(',', (string) static::get('languages', 'en:English')) as $pair) {
+            [$code, $label] = array_pad(explode(':', trim($pair), 2), 2, null);
+            if ($code) {
+                $out[trim($code)] = trim($label ?: strtoupper($code));
+            }
+        }
+
+        return $out ?: ['en' => 'English'];
     }
 }

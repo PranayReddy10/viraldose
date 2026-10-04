@@ -95,6 +95,8 @@ class User extends Authenticatable
 
     public function avatarUrl(): ?string
     {
-        return $this->avatar ? asset('storage/'.$this->avatar) : null;
+        $avatar = $this->getAttributes()['avatar'] ?? null;
+
+        return $avatar ? media_url($avatar) : null;
     }
 }

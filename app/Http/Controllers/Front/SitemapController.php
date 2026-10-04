@@ -108,6 +108,13 @@ class SitemapController extends Controller
         return response(implode("\n", $lines)."\n", 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
     }
 
+    public function indexNowKey(string $key)
+    {
+        abort_unless(hash_equals((string) setting('indexnow_key'), $key), 404);
+
+        return response($key, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
+    }
+
     public function adsTxt()
     {
         $content = (string) setting('ads_txt', '');

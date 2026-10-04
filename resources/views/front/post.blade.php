@@ -69,6 +69,36 @@
                 {!! $content !!}
             </div>
 
+            @if($post->images->isNotEmpty())
+                <section class="mt-8" aria-label="Photo gallery">
+                    <h2 class="section-title">Gallery</h2>
+                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        @foreach($post->images as $image)
+                            <figure>
+                                <a href="{{ $image->url('large') }}" target="_blank" rel="noopener" class="block overflow-hidden rounded-lg aspect-[4/3] bg-ink-100">
+                                    <img src="{{ $image->url('medium') }}" alt="{{ $image->caption ?: $post->title.' – photo '.$loop->iteration }}" width="800" height="600" loading="lazy" decoding="async" class="h-full w-full object-cover">
+                                </a>
+                                @if($image->caption)<figcaption class="mt-1 text-xs text-ink-500">{{ $image->caption }}</figcaption>@endif
+                            </figure>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
+            @if($post->files->isNotEmpty())
+                <section class="mt-8 rounded-lg border border-ink-100 p-5" aria-label="Downloads">
+                    <h2 class="font-bold">Downloads</h2>
+                    <ul class="mt-2 space-y-2 text-sm">
+                        @foreach($post->files as $file)
+                            <li class="flex items-center justify-between gap-3">
+                                <a href="{{ route('post.file.download', $file) }}" rel="nofollow" class="font-medium text-brand-600 hover:underline">{{ $file->name }}</a>
+                                <span class="text-xs text-ink-500">{{ $file->humanSize() }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </section>
+            @endif
+
             @if($post->source_name || $post->source_url)
                 <p class="mt-6 text-sm text-ink-500">Source:
                     @if($post->source_url)<a href="{{ $post->source_url }}" rel="nofollow noopener" target="_blank" class="underline">{{ $post->source_name ?: parse_url($post->source_url, PHP_URL_HOST) }}</a>@else{{ $post->source_name }}@endif

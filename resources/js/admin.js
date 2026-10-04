@@ -61,9 +61,17 @@ document.addEventListener('DOMContentLoaded', () => {
         pvTitle.textContent = t.length > 60 ? t.slice(0, 57) + '…' : t + (metaTitle && metaTitle.value ? '' : ' - ' + site);
         const d = (metaDesc && metaDesc.value) || (excerpt && excerpt.value) || 'Meta description will appear here.';
         pvDesc.textContent = d.length > 160 ? d.slice(0, 157) + '…' : d;
-        if (pvUrl) pvUrl.textContent = base + '/' + (slug && slug.value ? slug.value : 'post-slug');
+        if (pvUrl) {
+            const form = document.getElementById('post-form');
+            const cat = document.querySelector('[data-category-select]');
+            const catSlug = cat && cat.selectedOptions[0] ? cat.selectedOptions[0].dataset.slug : '';
+            const prefix = form && form.dataset.urlFormat === 'category' ? '/' + (catSlug || 'category') : '';
+            pvUrl.textContent = base + prefix + '/' + (slug && slug.value ? slug.value : 'post-slug');
+        }
     }
     [metaTitle, metaDesc, excerpt, slug].forEach((el) => el && el.addEventListener('input', updatePreview));
+    const catSel = document.querySelector('[data-category-select]');
+    if (catSel) catSel.addEventListener('change', updatePreview);
     updatePreview();
 
     // Quill editor
@@ -131,6 +139,76 @@ document.addEventListener('DOMContentLoaded', () => {
     const all = document.getElementById('select-all');
     if (all) {
         all.addEventListener('change', () => document.querySelectorAll('input[name="ids[]"]').forEach((c) => (c.checked = all.checked)));
+    }
+
+    // Save as draft / publish buttons
+    document.querySelectorAll('[data-save-as]').forEach((btn) =>
+        btn.addEventListener('click', () => {
+            const hidden = document.getElementById('save_as');
+            if (hidden) hidden.value = btn.dataset.saveAs;
+        }),
+    );
+
+    // Scheduled post toggle
+    const sched = document.getElementById('scheduled-toggle');
+    if (sched) {
+        const fields = document.getElementById('scheduled-fields');
+        sched.addEventListener('change', () => fields.classList.toggle('hidden', !sched.checked));
+    }
+
+    // Multi-file name lists
+    document.querySelectorAll('input[type=file][data-file-list]').forEach((input) => {
+        input.addEventListener('change', () => {
+            const list = document.getElementById(input.dataset.fileList);
+            if (!list) return;
+            list.innerHTML = '';
+            [...input.files].forEach((f) => {
+                const li = document.createElement('li');
+                li.textContent = `${f.name} (${Math.round(f.size / 1024)} KB)`;
+                list.appendChild(li);
+            });
+        });
+    });
+
+    // Settings tabs
+    const tabForm = document.querySelector('[data-tabs]');
+    if (tabForm) {
+        tabForm.querySelectorAll('[data-tab]').forEach((btn) =>
+            btn.addEventListener('click', () => {
+                tabForm.querySelectorAll('[data-tab]').forEach((b) => b.classList.remove('border-brand-600', 'text-brand-600'));
+                tabForm.querySelectorAll('[data-tab]').forEach((b) => b.classList.add('border-transparent', 'text-ink-500'));
+                btn.classList.add('border-brand-600', 'text-brand-600');
+                btn.classList.remove('border-transparent', 'text-ink-500');
+                tabForm.querySelectorAll('[data-tab-panel]').forEach((p) => p.classList.toggle('hidden', p.dataset.tabPanel !== btn.dataset.tab));
+                const input = tabForm.querySelector('[data-tab-input]');
+                if (input) input.value = btn.dataset.tab;
+                history.replaceState(null, '', '?tab=' + btn.dataset.tab);
+            }),
+        );
+    }
+
+    // RSS feed preview
+    const previewBtn = document.querySelector('[data-feed-preview]');
+    if (previewBtn) {
+        previewBtn.addEventListener('click', async () => {
+            const url = document.querySelector('[name=url]').value;
+            const list = document.getElementById('feed-preview');
+            list.classList.remove('hidden');
+            list.innerHTML = '<li class="p-3 text-ink-500">Fetching…</li>';
+            const res = await fetch(previewBtn.dataset.feedPreview, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                body: JSON.stringify({ url }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                list.innerHTML = `<li class="p-3 text-red-600">${data.error || 'Could not read this feed'}</li>`;
+                return;
+            }
+            list.innerHTML = data.items.length
+                ? data.items.map((i) => `<li class="flex items-center gap-3 p-3">${i.image ? `<img src="${i.image}" class="h-10 w-14 rounded object-cover" alt="">` : ''}<span class="min-w-0"><span class="block truncate font-medium">${i.title}</span><span class="block text-xs text-ink-500">${i.date || ''}</span></span></li>`).join('')
+                : '<li class="p-3 text-ink-500">Feed is valid but has no items.</li>';
+        });
     }
 
     // Image preview

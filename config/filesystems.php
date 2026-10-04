@@ -47,6 +47,22 @@ return [
             'report' => false,
         ],
 
+        // DigitalOcean Spaces (S3-compatible). Credentials come from Settings → Storage
+        // (stored in the database) and fall back to these env values.
+        'spaces' => [
+            'driver' => 's3',
+            'key' => env('DO_SPACES_KEY'),
+            'secret' => env('DO_SPACES_SECRET'),
+            'region' => env('DO_SPACES_REGION', 'blr1'),
+            'bucket' => env('DO_SPACES_BUCKET'),
+            'endpoint' => env('DO_SPACES_ENDPOINT', 'https://blr1.digitaloceanspaces.com'),
+            'url' => env('DO_SPACES_CDN_URL'),
+            'use_path_style_endpoint' => false,
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

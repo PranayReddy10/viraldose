@@ -6,9 +6,11 @@ in Search Console as *"Crawled – currently not indexed"*).
 
 - Public site: home with hero/featured/latest/category sections, article pages, category & sub-category
   archives, tags, author profiles, search, static pages, contact form, newsletter, comments (moderated).
-- Admin panel (`/admin`): posts with rich editor + image upload, scheduling, SEO panel with Google snippet
-  preview, categories (2 levels), tags, pages, comment moderation, users & roles (admin / editor / author),
-  ad slots (AdSense or banners), 301 redirect manager with CSV import, subscribers export, contact inbox, settings.
+- Admin panel (`/admin`): Varient-style article editor (post details, content, image, additional images,
+  downloadable files, category/language, publish/schedule), on-page SEO score with Google snippet preview,
+  categories (2 levels), tags, pages, comment moderation, users & roles (admin / editor / author), RSS feed
+  import, Google Search Console / Indexing / GA4 dashboard, ad slots, 301 redirect manager with CSV import,
+  subscribers export, contact inbox, settings incl. DigitalOcean Spaces storage.
 - SEO built in: canonical URLs, one URL per page (301 for trailing slash / uppercase / legacy form), meta
   title & description per post/category/page, Open Graph + Twitter cards, JSON-LD (`NewsArticle`,
   `BreadcrumbList`, `WebSite` + `SearchAction`, `NewsMediaOrganization`, `ProfilePage`, `CollectionPage`),
@@ -108,6 +110,39 @@ codes, structured data, sitemaps, fast mobile pages). What you still have to do,
 7. Set up Bing Webmaster too (free extra traffic; verification field is in Settings).
 
 Give it 2–6 weeks after relaunch; watch *Pages → Not indexed* shrink in Search Console.
+
+## Google Search Console, Indexing API & Analytics
+
+One Google **service-account JSON key** (Settings → Google & Indexing) powers:
+
+- **Search performance** in the admin (clicks, impressions, CTR, position, top queries/pages, 7/28/90 days).
+- **Live index status per article** (URL Inspection API) with a "Not indexed by Google" counter on the dashboard
+  and a filter in the posts list.
+- **Automatic submission** of every published/updated article to the Google Indexing API and to IndexNow
+  (Bing, Yandex, Seznam, Naver). Scheduled posts are submitted by the scheduler (`posts:ping`). Bulk tools under
+  Admin → Google → Indexing. Every call is logged.
+- **Sitemap submission & status** from Admin → Google → Sitemaps.
+- **GA4 traffic** (users, sessions, page views, top pages, sources, countries, devices).
+
+Setup: Google Cloud → enable *Search Console API*, *Web Search Indexing API*, *Google Analytics Data API* →
+create a service account → download its JSON key → upload it in Settings. Then add the service-account email as
+an **Owner** in Search Console (needed for the Indexing API) and as a **Viewer** on the GA4 property; enter the
+GA4 property ID. Note: Google documents the Indexing API for job/livestream pages; news sites use it widely but
+Google may ignore notifications for other content — the sitemaps and news sitemap remain the official path.
+
+## DigitalOcean Spaces (media storage)
+
+Settings → Storage: choose *DigitalOcean Spaces*, enter key, secret, region, bucket, endpoint and (optional) CDN
+URL, save, then **Test connection**. New uploads (featured images, galleries, files, inline editor images) go to
+the Space with WebP variants; existing local files keep working. The same values can be given via `DO_SPACES_*`
+in `.env`.
+
+## RSS import
+
+Admin → RSS Feeds: add a feed URL, target category, author and language. Feeds are fetched hourly (`feeds:import`)
+or on demand; items arrive as drafts (recommended – rewrite before publishing) or auto-published. Items are
+de-duplicated by GUID and source URL, HTML is sanitised, the first image becomes the featured image, and the
+original link is kept as the source.
 
 ## Project layout
 
