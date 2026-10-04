@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Page;
 use App\Models\Post;
+use App\Models\Reel;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,9 @@ class SitemapController extends Controller
             ['loc' => route('sitemap.tags'), 'lastmod' => $latest],
             ['loc' => route('sitemap.authors'), 'lastmod' => $latest],
         ];
+        if (setting('reels_enabled', 1) && Reel::live()->exists()) {
+            $maps[] = ['loc' => route('sitemap.reels'), 'lastmod' => Reel::live()->max('updated_at')];
+        }
         for ($i = 1; $i <= $chunks; $i++) {
             $maps[] = ['loc' => route('sitemap.posts', $i), 'lastmod' => $latest];
         }
@@ -76,6 +80,13 @@ class SitemapController extends Controller
         $authors = User::where('is_active', true)->whereHas('posts', fn ($q) => $q->published())->get(['id', 'slug', 'updated_at']);
 
         return $this->xml('front.sitemap.authors', compact('authors'));
+    }
+
+    public function reels()
+    {
+        $reels = Reel::live()->ordered()->get();
+
+        return $this->xml('front.sitemap.reels', compact('reels'));
     }
 
     /**

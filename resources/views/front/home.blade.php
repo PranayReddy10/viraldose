@@ -28,6 +28,25 @@
         </section>
     @endif
 
+    @include('partials.ad', ['slot' => 'home_after_hero'])
+
+    @if($reels->isNotEmpty())
+        <section class="mt-8" aria-label="Reels">
+            <h2 class="section-title"><a href="{{ route('reels.index') }}" class="flex items-center gap-2 hover:text-brand-600"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4zM4 9h16M9 4v16M15 4v16"/></svg>Reels</a></h2>
+            <div class="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 no-scrollbar sm:mx-0 sm:px-0">
+                @foreach($reels as $reel)
+                    <a href="{{ $reel->url() }}" class="group relative w-32 shrink-0 overflow-hidden rounded-lg bg-ink-900 aspect-[9/16] sm:w-40">
+                        @if($reel->thumbnailUrl())<img src="{{ $reel->thumbnailUrl() }}" alt="{{ $reel->title }}" width="400" height="711" loading="lazy" decoding="async" class="h-full w-full object-cover opacity-90 transition group-hover:scale-105">@endif
+                        <span class="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent"></span>
+                        <span class="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-white"><svg class="ml-0.5 h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+                        <span class="absolute inset-x-0 bottom-0 p-2 text-xs font-bold leading-snug text-white line-clamp-3">{{ $reel->title }}</span>
+                    </a>
+                @endforeach
+                <a href="{{ route('reels.index') }}" class="flex w-32 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-ink-300 text-center text-sm font-semibold text-ink-700 aspect-[9/16] hover:border-brand-600 hover:text-brand-600 sm:w-40">See all<br>reels →</a>
+            </div>
+        </section>
+    @endif
+
     <div class="mt-10 grid gap-10 lg:grid-cols-3">
         <div class="space-y-12 lg:col-span-2">
             @if($featured->isNotEmpty())
@@ -46,15 +65,15 @@
                 <div class="space-y-6">
                     @forelse($latest as $post)
                         <x-post-card :post="$post" variant="list" heading="h3" />
+                        @if($loop->iteration % 5 === 0 && ! $loop->last)@include('partials.ad', ['slot' => 'home_in_latest'])@endif
                     @empty
                         <p class="text-ink-500">No articles published yet. <a href="{{ route('admin.login') }}" class="text-brand-600 underline">Log in</a> to add your first story.</p>
                     @endforelse
                 </div>
             </section>
 
-            @include('partials.ad', ['slot' => 'home_middle'])
-
             @foreach($sections as $i => $section)
+                @if($i > 0 && $i % 2 === 0)@include('partials.ad', ['slot' => 'home_middle'])@endif
                 <section>
                     <h2 class="section-title"><a href="{{ $section['category']->url() }}" class="hover:text-brand-600" style="color: {{ $section['category']->color }}">{{ $section['category']->name }}</a></h2>
                     <div class="grid gap-6 sm:grid-cols-2">

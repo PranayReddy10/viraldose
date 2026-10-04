@@ -157,6 +157,16 @@ class Post extends Model
         return $this->hasMany(IndexingLog::class)->latest('created_at');
     }
 
+    public function socialShares(): HasMany
+    {
+        return $this->hasMany(SocialShare::class)->latest();
+    }
+
+    public function reels(): HasMany
+    {
+        return $this->hasMany(Reel::class);
+    }
+
     // Scopes
 
     public function scopePublished(Builder $query): Builder

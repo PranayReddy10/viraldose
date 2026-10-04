@@ -185,6 +185,8 @@
                 </section>
             @endif
 
+            @include('partials.ad', ['slot' => 'post_after_related'])
+
             @if(setting('comments_enabled') && $post->allow_comments)
                 <section id="comments" class="mt-12">
                     <h2 class="section-title">Comments ({{ $comments->count() }})</h2>

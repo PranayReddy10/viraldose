@@ -120,6 +120,38 @@ post or Facebook post** at the cursor from its public URL. Embeds are stored as 
 the real embed on the public page (YouTube via the privacy-enhanced domain, X and Instagram via their official
 scripts loaded only on pages that need them).
 
+## One-click Instagram posting
+
+Every story has an **Instagram** box in the editor. The app renders a 1080×1350 news card (featured image, category
+badge, headline, site name) and, once the Instagram Business account is connected (Settings → Instagram: business
+account ID + long-lived Page access token, then *Test connection*), **Post card to Instagram** publishes it with a
+caption built from the template (`{title} {excerpt} {category} {url} {hashtags}`). Posts with a direct `.mp4`
+video can be published as a **Reel** (processed by the `social:process` scheduler). Without the API connection the
+**Download card** and **Copy caption** buttons still make manual posting a 10-second job. An optional switch
+auto-posts every newly published story.
+
+## Reels / Shorts feed
+
+`/reels` is a vertical, swipe-to-scroll feed (YouTube Shorts / Instagram Reels style) with autoplay, mute toggle,
+share, "read the full story" links, infinite loading, per-reel URLs with `VideoObject` schema and a video sitemap;
+the home page shows a reels strip. Reels are added under Admin → Reels from four sources: an **uploaded MP4**
+(limits raised via `public/.user.ini`), a **direct video URL** (e.g. a file on DigitalOcean Spaces), a **YouTube
+Shorts / video URL** (thumbnail fetched automatically) or an **Instagram reel URL** (official embed). A reel can be
+created from any video post with one click. Ads can be inserted after every N reels.
+
+## Advertising
+
+16 ad slots cover the whole site: header, below the hero, inside the latest-news list, between home sections,
+sidebar top/middle/bottom (sticky), before/inside/after the article, after related stories, archive grids, the
+reels feed, a closable sticky mobile anchor and the footer. Each ad unit (AdSense code or banner image) can target
+mobile/desktop and page types. Site-wide switches, AdSense publisher ID, Auto Ads and `ads.txt` live in
+Settings → Ads; **Ads enabled** turns everything off instantly.
+
+## Header & Body code
+
+Settings → **Header Code** injects HTML/scripts into `<head>` plus a Custom CSS box; Settings → **Body Code** has
+two boxes: right after `<body>` (e.g. GTM noscript) and before `</body>` (widgets, chat, push notifications).
+
 ## Google Search Console, Indexing API & Analytics
 
 One Google **service-account JSON key** (Settings → Google & Indexing) powers:

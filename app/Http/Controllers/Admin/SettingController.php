@@ -7,6 +7,7 @@ use App\Models\Setting;
 use App\Services\Google\GoogleClient;
 use App\Services\ImageService;
 use App\Services\IndexNow;
+use App\Services\InstagramPublisher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
@@ -24,6 +25,7 @@ class SettingController extends Controller
             'googleEmail' => $this->google->clientEmail(),
             'indexNowKey' => IndexNow::key(),
             'spacesConfigured' => (bool) setting('spaces_bucket'),
+            'instagramReady' => app(InstagramPublisher::class)->isReady(),
         ]);
     }
 
@@ -56,7 +58,21 @@ class SettingController extends Controller
             'adsense_client_id' => ['nullable', 'string', 'max:40', 'regex:/^(ca-)?pub-[0-9]+$/'],
             'ads_txt' => ['nullable', 'string', 'max:20000'],
             'head_scripts' => ['nullable', 'string', 'max:20000'],
+            'body_start_scripts' => ['nullable', 'string', 'max:20000'],
             'body_scripts' => ['nullable', 'string', 'max:20000'],
+            'custom_css' => ['nullable', 'string', 'max:50000'],
+            'ads_enabled' => ['nullable', 'boolean'],
+            'adsense_auto_ads' => ['nullable', 'boolean'],
+            'mobile_sticky_ad' => ['nullable', 'boolean'],
+            'instagram_business_id' => ['nullable', 'string', 'max:40', 'regex:/^\d*$/'],
+            'instagram_access_token' => ['nullable', 'string', 'max:600'],
+            'instagram_username' => ['nullable', 'string', 'max:60'],
+            'instagram_auto_share' => ['nullable', 'boolean'],
+            'instagram_hashtags' => ['nullable', 'string', 'max:600'],
+            'instagram_caption_template' => ['nullable', 'string', 'max:2000'],
+            'reels_enabled' => ['nullable', 'boolean'],
+            'reels_per_page' => ['nullable', 'integer', 'min:4', 'max:30'],
+            'reels_ad_every' => ['nullable', 'integer', 'min:0', 'max:20'],
             'organization_type' => ['required', 'in:NewsMediaOrganization,Organization'],
             'organization_founded' => ['nullable', 'string', 'max:20'],
             'google_news_publication_name' => ['nullable', 'string', 'max:100'],
@@ -86,7 +102,7 @@ class SettingController extends Controller
             'publisher_logo' => ['nullable', 'image', 'max:1024'],
         ]);
 
-        foreach (['show_breaking_bar', 'comments_enabled', 'comments_auto_approve', 'google_auto_index', 'indexnow_enabled'] as $flag) {
+        foreach (['show_breaking_bar', 'comments_enabled', 'comments_auto_approve', 'google_auto_index', 'indexnow_enabled', 'ads_enabled', 'adsense_auto_ads', 'mobile_sticky_ad', 'instagram_auto_share', 'reels_enabled'] as $flag) {
             $data[$flag] = $request->boolean($flag) ? 1 : 0;
         }
         unset($data['google_service_account'], $data['remove_google_service_account']);
@@ -96,6 +112,11 @@ class SettingController extends Controller
             unset($data['spaces_secret']);
         } else {
             $data['spaces_secret'] = Crypt::encryptString($data['spaces_secret']);
+        }
+        if (blank($data['instagram_access_token'] ?? null)) {
+            unset($data['instagram_access_token']);
+        } else {
+            $data['instagram_access_token'] = Crypt::encryptString(trim($data['instagram_access_token']));
         }
 
         foreach (['logo', 'logo_dark', 'favicon', 'default_og_image', 'publisher_logo'] as $file) {
@@ -121,6 +142,21 @@ class SettingController extends Controller
         Cache::flush();
 
         return redirect()->route('admin.settings.edit', ['tab' => $request->input('tab', 'general')])->with('status', 'Settings saved.');
+    }
+
+    public function testInstagram(InstagramPublisher $instagram)
+    {
+        if (! $instagram->isReady()) {
+            return back()->withErrors(['instagram_business_id' => 'Enter the Instagram business account ID and access token, save, then test.']);
+        }
+        try {
+            $account = $instagram->account();
+        } catch (\Throwable $e) {
+            return back()->withErrors(['instagram_business_id' => $e->getMessage()]);
+        }
+        Setting::set('instagram_username', $account['username']);
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'instagram'])->with('status', 'Instagram connected: @'.$account['username'].($account['followers'] !== null ? ' ('.number_format($account['followers']).' followers)' : ''));
     }
 
     /**

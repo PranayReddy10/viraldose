@@ -3,7 +3,7 @@
 @section('content')
 @php
     $s = fn ($k) => old($k, $settings[$k] ?? '');
-    $tabs = ['general' => 'General', 'branding' => 'Branding', 'content' => 'Content', 'social' => 'Social', 'seo' => 'SEO', 'google' => 'Google & Indexing', 'storage' => 'Storage (DigitalOcean)', 'advanced' => 'Advanced'];
+    $tabs = ['general' => 'General', 'branding' => 'Branding', 'content' => 'Content', 'social' => 'Social', 'seo' => 'SEO', 'google' => 'Google & Indexing', 'instagram' => 'Instagram', 'reels' => 'Reels', 'ads' => 'Ads', 'storage' => 'Storage (DigitalOcean)', 'header' => 'Header Code', 'body' => 'Body Code'];
 @endphp
 <form method="post" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data" data-tabs>
     @csrf @method('PUT')
@@ -67,8 +67,6 @@
         <x-admin.field label="Google Search Console verification code" name="google_site_verification" :value="$s('google_site_verification')" help="Only the content value of the HTML-tag method. Not needed once the service account is an owner of the property." />
         <x-admin.field label="Bing Webmaster verification code" name="bing_site_verification" :value="$s('bing_site_verification')" />
         <x-admin.field label="Google Analytics measurement ID" name="google_analytics_id" :value="$s('google_analytics_id')" help="e.g. G-XXXXXXXXXX – adds the gtag snippet to every page." />
-        <x-admin.field label="AdSense publisher ID" name="adsense_client_id" :value="$s('adsense_client_id')" help="e.g. pub-1234567890123456. Loads the AdSense script site-wide." />
-        <x-admin.field label="ads.txt content" name="ads_txt" type="textarea" :value="$s('ads_txt')" help="Served at /ads.txt" />
         <p class="text-sm text-ink-500">Sitemaps: <a href="{{ route('sitemap.index') }}" target="_blank" class="underline">/sitemap.xml</a> · <a href="{{ route('sitemap.news') }}" target="_blank" class="underline">/news-sitemap.xml</a> · <a href="{{ route('feed') }}" target="_blank" class="underline">/feed</a> · <a href="{{ route('robots') }}" target="_blank" class="underline">/robots.txt</a></p>
     </div>
 
@@ -131,9 +129,71 @@
         <p class="mt-4 text-xs text-ink-500">Tip: on DigitalOcean also enable the Space's CDN and set the CDN URL above so images are served from the edge. Set the Space's file listing to private but files to public-read (the app uploads with public visibility).</p>
     </div>
 
-    <div data-tab-panel="advanced" class="{{ $tab === 'advanced' ? '' : 'hidden' }} card max-w-3xl p-6">
-        <x-admin.field label="Extra &lt;head&gt; code" name="head_scripts" type="textarea" :rows="5" :value="$s('head_scripts')" help="Verification tags, fonts, pixels." />
-        <x-admin.field label="Code before &lt;/body&gt;" name="body_scripts" type="textarea" :rows="5" :value="$s('body_scripts')" />
+    <div data-tab-panel="instagram" class="{{ $tab === 'instagram' ? '' : 'hidden' }} grid max-w-5xl gap-6 lg:grid-cols-2">
+        <div class="card p-6">
+            <h2 class="font-bold">Instagram page connection</h2>
+            <p class="mt-1 text-sm text-ink-500">Lets editors post any story to <strong>instagram.com/{{ ltrim($s('instagram_username') ?: 'viraldose_news', '@') }}</strong> with one click (image card or reel). Needs an Instagram <em>Business</em> or <em>Creator</em> account linked to a Facebook Page.</p>
+            @if($instagramReady)<p class="mt-3 rounded bg-green-50 px-3 py-2 text-sm text-green-800">Connected as {{ '@'.ltrim($s('instagram_username'), '@') }}</p>@else<p class="mt-3 rounded bg-yellow-50 px-3 py-2 text-sm text-yellow-800">Not connected – the “Download card” button still works for manual posting.</p>@endif
+            <x-admin.field label="Instagram business account ID" name="instagram_business_id" :value="$s('instagram_business_id')" help="Numeric ID (e.g. 17841400000000000)." class="mt-4" />
+            <div class="mb-4">
+                <label class="label" for="f-instagram_access_token">Access token</label>
+                <input id="f-instagram_access_token" type="password" name="instagram_access_token" class="input" placeholder="{{ $settings['instagram_access_token'] ? '•••••••• (saved – leave blank to keep)' : 'Long-lived Page access token' }}" autocomplete="new-password">
+                @error('instagram_access_token')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+            </div>
+            <x-admin.field label="Instagram username" name="instagram_username" :value="$s('instagram_username')" help="Shown on the generated card." />
+            <div class="flex gap-2">
+                <button type="submit" class="btn-primary">Save</button>
+                @if($s('instagram_business_id'))<button type="submit" formaction="{{ route('admin.settings.test-instagram') }}" formmethod="post" formnovalidate class="btn-outline">Test connection</button>@endif
+            </div>
+            <ol class="mt-5 list-decimal space-y-1 pl-5 text-xs text-ink-700">
+                <li>Switch the Instagram account to Business/Creator and link it to a Facebook Page.</li>
+                <li>developers.facebook.com → create an app (Business) → add <em>Instagram Graph API</em>.</li>
+                <li>Graph API Explorer → permissions <code>instagram_basic, instagram_content_publish, pages_show_list, pages_read_engagement, business_management</code> → generate a user token → exchange for a long-lived token → get the <strong>Page access token</strong> (does not expire).</li>
+                <li>Find the Instagram business account ID: <code>GET /me/accounts?fields=instagram_business_account</code>.</li>
+                <li>Paste both values here and press Test connection. Images must be publicly reachable JPEGs — the app generates them automatically.</li>
+            </ol>
+        </div>
+        <div class="card p-6">
+            <h2 class="mb-3 font-bold">Posting defaults</h2>
+            <x-admin.checkbox label="Automatically post every newly published story to Instagram" name="instagram_auto_share" :checked="(bool) $s('instagram_auto_share')" help="Uses the generated news card. Otherwise editors click “Post to Instagram” on each story." />
+            <x-admin.field label="Caption template" name="instagram_caption_template" type="textarea" :rows="6" :value="str_replace('\\n', PHP_EOL, $s('instagram_caption_template'))" help="Placeholders: {title} {excerpt} {category} {url} {hashtags}. Instagram does not make links clickable – keep “link in bio”." />
+            <x-admin.field label="Default hashtags" name="instagram_hashtags" :value="$s('instagram_hashtags')" />
+            <p class="text-xs text-ink-500">Card format: 1080×1350 JPEG with the featured image, category badge, headline and site name. Preview/download it from any post's Instagram box.</p>
+        </div>
+    </div>
+
+    <div data-tab-panel="reels" class="{{ $tab === 'reels' ? '' : 'hidden' }} card max-w-3xl p-6">
+        <h2 class="font-bold">Reels / Shorts feed</h2>
+        <p class="mb-4 mt-1 text-sm text-ink-500">Vertical swipe feed at <a href="{{ route('reels.index') }}" target="_blank" class="underline">/reels</a> plus a strip on the home page. Manage videos under <a href="{{ route('admin.reels.index') }}" class="underline">Reels</a>.</p>
+        <x-admin.checkbox label="Enable Reels" name="reels_enabled" :checked="(bool) $s('reels_enabled')" />
+        <div class="grid gap-4 sm:grid-cols-2">
+            <x-admin.field label="Reels per load" name="reels_per_page" type="number" :value="$s('reels_per_page')" />
+            <x-admin.field label="Show an ad after every N reels" name="reels_ad_every" type="number" :value="$s('reels_ad_every')" help="0 = no ads in the feed. Uses the “Reels feed” ad slot." />
+        </div>
+    </div>
+
+    <div data-tab-panel="ads" class="{{ $tab === 'ads' ? '' : 'hidden' }} card max-w-3xl p-6">
+        <h2 class="font-bold">Advertising</h2>
+        <p class="mb-4 mt-1 text-sm text-ink-500">Ad units are placed per slot under <a href="{{ route('admin.ads.index') }}" class="underline">Ad Spaces</a> (16 slots: header, in-feed, sidebar, in-article, archive grid, reels feed, sticky mobile, footer). These are the site-wide switches.</p>
+        <x-admin.checkbox label="Ads enabled" name="ads_enabled" :checked="(bool) $s('ads_enabled')" help="Turn off to hide every ad slot instantly." />
+        <x-admin.field label="AdSense publisher ID" name="adsense_client_id" :value="$s('adsense_client_id')" help="e.g. pub-1234567890123456. Loads the AdSense script on every page." />
+        <x-admin.checkbox label="AdSense Auto Ads" name="adsense_auto_ads" :checked="(bool) $s('adsense_auto_ads')" help="Let Google place additional ads automatically (enable Auto ads for the site in AdSense too)." />
+        <x-admin.checkbox label="Sticky bottom ad on mobile" name="mobile_sticky_ad" :checked="(bool) $s('mobile_sticky_ad')" help="Shows the “Mobile – sticky bottom anchor” slot as a closable bar." />
+        <x-admin.field label="ads.txt content" name="ads_txt" type="textarea" :rows="4" :value="$s('ads_txt')" help="Served at /ads.txt" />
+    </div>
+
+    <div data-tab-panel="header" class="{{ $tab === 'header' ? '' : 'hidden' }} card max-w-3xl p-6">
+        <h2 class="font-bold">Header code (&lt;head&gt;)</h2>
+        <p class="mb-4 mt-1 text-sm text-ink-500">Injected on every public page before <code>&lt;/head&gt;</code>: verification meta tags, Google Tag Manager, Facebook Pixel, fonts, extra meta.</p>
+        <x-admin.field label="HTML / scripts in <head>" name="head_scripts" type="textarea" :rows="8" :value="$s('head_scripts')" />
+        <x-admin.field label="Custom CSS" name="custom_css" type="textarea" :rows="8" :value="$s('custom_css')" help="Added as a <style> tag after the theme CSS, e.g. .cat-badge{border-radius:0}" />
+    </div>
+
+    <div data-tab-panel="body" class="{{ $tab === 'body' ? '' : 'hidden' }} card max-w-3xl p-6">
+        <h2 class="font-bold">Body code</h2>
+        <p class="mb-4 mt-1 text-sm text-ink-500">Injected on every public page. Use the first box for code that must sit right after <code>&lt;body&gt;</code> (e.g. the GTM noscript iframe) and the second for widgets, chat bubbles or notification scripts loaded before <code>&lt;/body&gt;</code>.</p>
+        <x-admin.field label="Right after <body>" name="body_start_scripts" type="textarea" :rows="6" :value="$s('body_start_scripts')" />
+        <x-admin.field label="Before </body>" name="body_scripts" type="textarea" :rows="8" :value="$s('body_scripts')" />
     </div>
 
     <div class="mt-6"><button class="btn-primary" type="submit">Save settings</button></div>

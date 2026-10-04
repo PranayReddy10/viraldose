@@ -15,6 +15,7 @@ use App\Services\Google\GoogleClient;
 use App\Services\HtmlSanitizer;
 use App\Services\ImageService;
 use App\Services\IndexNow;
+use App\Services\InstagramPublisher;
 use App\Services\SearchEnginePinger;
 use App\Services\SeoAnalyzer;
 use Illuminate\Http\Request;
@@ -193,6 +194,8 @@ class PostController extends Controller
             'googleReady' => app(GoogleClient::class)->isConfigured(),
             'indexNowReady' => IndexNow::enabled(),
             'indexingLogs' => $post->exists ? $post->indexingLogs()->limit(8)->get() : collect(),
+            'instagram' => app(InstagramPublisher::class),
+            'shares' => $post->exists ? $post->socialShares()->limit(5)->get() : collect(),
         ];
     }
 
@@ -270,6 +273,15 @@ class PostController extends Controller
             $this->pinger->notifyIfJustPublished($post->fresh(['category']), $wasPublished);
         } catch (\Throwable) {
             // Never block saving on a search-engine API hiccup; the log has the details.
+        }
+        if (! $wasPublished && $post->isPublished() && setting('instagram_auto_share')) {
+            try {
+                $instagram = app(InstagramPublisher::class);
+                if ($instagram->isReady() && ! $post->socialShares()->where('network', 'instagram')->where('status', 'published')->exists()) {
+                    $instagram->shareImage($post->fresh(['category']));
+                }
+            } catch (\Throwable) {
+            }
         }
     }
 }

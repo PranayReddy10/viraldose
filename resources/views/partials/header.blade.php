@@ -48,6 +48,7 @@
                         @endif
                     </li>
                 @endforeach
+                @if(setting('reels_enabled', 1))<li><a href="{{ route('reels.index') }}" class="nav-link flex items-center gap-1 {{ request()->routeIs('reels.*') ? 'text-brand-600' : '' }}"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4zM4 9h16M9 4v16M15 4v16"/></svg>Reels</a></li>@endif
             </ul>
         </nav>
     </div>
@@ -66,6 +67,7 @@
                     @endif
                 </li>
             @endforeach
+            @if(setting('reels_enabled', 1))<li><a href="{{ route('reels.index') }}" class="block py-3 font-semibold">Reels</a></li>@endif
             <li><a href="{{ route('contact') }}" class="block py-3 font-semibold">Contact</a></li>
         </ul>
     </nav>
@@ -73,6 +75,7 @@
     {{-- Mobile horizontal category strip --}}
     <div class="lg:hidden border-t border-ink-100 overflow-x-auto no-scrollbar">
         <ul class="container-site flex gap-1 py-1">
+            @if(setting('reels_enabled', 1))<li><a href="{{ route('reels.index') }}" class="block whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold uppercase {{ request()->routeIs('reels.*') ? 'bg-brand-600 text-white' : 'bg-ink-900 text-white' }}">▶ Reels</a></li>@endif
             @foreach($navCategories as $category)
                 <li><a href="{{ $category->url() }}" class="block whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold uppercase {{ request()->is('category/'.$category->slug) ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-700' }}">{{ $category->name }}</a></li>
             @endforeach

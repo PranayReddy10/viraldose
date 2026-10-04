@@ -207,6 +207,27 @@ document.addEventListener('DOMContentLoaded', () => {
         sync();
     }
 
+    // Reel source switch
+    const radios = document.querySelectorAll('[data-source-radio]');
+    if (radios.length) {
+        const syncSource = () => {
+            const v = document.querySelector('[data-source-radio]:checked')?.value;
+            document.querySelectorAll('[data-source]').forEach((el) => el.classList.toggle('hidden', el.dataset.source !== v));
+        };
+        radios.forEach((r) => r.addEventListener('change', syncSource));
+        syncSource();
+    }
+
+    // Copy to clipboard
+    document.querySelectorAll('[data-copy]').forEach((btn) =>
+        btn.addEventListener('click', async () => {
+            const el = document.querySelector(btn.dataset.copy);
+            if (!el) return;
+            await navigator.clipboard.writeText(el.value || el.textContent);
+            const old = btn.textContent; btn.textContent = 'Copied!'; setTimeout(() => (btn.textContent = old), 1500);
+        }),
+    );
+
     // Scheduled post toggle
     const sched = document.getElementById('scheduled-toggle');
     if (sched) {

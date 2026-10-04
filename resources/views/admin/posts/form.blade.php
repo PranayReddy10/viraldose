@@ -167,6 +167,44 @@
         </section>
         @endif
 
+        {{-- Instagram --}}
+        @if($post->exists)
+        <section class="card p-5">
+            <h2 class="mb-1 flex items-center gap-2 text-lg font-bold"><svg class="h-5 w-5" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" fill="#e1306c"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="#fff" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.3" fill="#fff"/></svg> Instagram</h2>
+            <p class="mb-3 text-xs text-ink-500">Post this story to <strong>{{ '@'.ltrim(setting('instagram_username', 'viraldose_news'), '@') }}</strong> as a news card with one click.</p>
+            <a href="{{ route('admin.posts.share.card', [$post, 'preview' => 1]) }}" target="_blank" class="block overflow-hidden rounded-lg border border-ink-100 bg-ink-100" title="Preview the generated card">
+                <img src="{{ route('admin.posts.share.card', [$post, 'preview' => 1, 'v' => $post->updated_at?->timestamp]) }}" alt="Instagram card preview" loading="lazy" class="mx-auto max-h-72 w-auto">
+            </a>
+            <label class="label mt-3" for="ig-caption">Caption</label>
+            <textarea id="ig-caption" name="caption" form="form-instagram" rows="5" class="input text-xs">{{ old('caption', $instagram->caption($post)) }}</textarea>
+            <div class="mt-3 flex flex-wrap gap-2">
+                @if($instagram->isReady())
+                    <button type="submit" form="form-instagram" name="media" value="card" class="btn bg-[#e1306c] text-white hover:bg-[#c1275a] !px-3 !py-1.5 text-xs">Post card to Instagram</button>
+                    @if($post->image)<button type="submit" form="form-instagram" name="media" value="image" class="btn-outline !px-3 !py-1.5 text-xs">Post featured image</button>@endif
+                    @if(($v = $post->video()) && $v['type'] === 'file')<button type="submit" form="form-instagram" name="media" value="reel" class="btn-outline !px-3 !py-1.5 text-xs">Post as Reel</button>@endif
+                @else
+                    <a href="{{ route('admin.settings.edit', ['tab' => 'instagram']) }}" class="btn-outline !px-3 !py-1.5 text-xs">Connect Instagram for one-click posting</a>
+                @endif
+                <a href="{{ route('admin.posts.share.card', $post) }}" class="btn-secondary !px-3 !py-1.5 text-xs">Download card</a>
+                <button type="button" class="btn-secondary !px-3 !py-1.5 text-xs" data-copy="#ig-caption">Copy caption</button>
+            </div>
+            @if($shares->isNotEmpty())
+                <ul class="mt-3 divide-y divide-ink-100 border-t border-ink-100 text-xs">
+                    @foreach($shares as $share)
+                        <li class="flex items-center gap-2 py-1.5">
+                            <span class="{{ ['published' => 'badge-green', 'processing' => 'badge-blue', 'failed' => 'badge-red'][$share->status] ?? 'badge-gray' }}">{{ $share->status }}</span>
+                            <span class="text-ink-500">{{ $share->media_type }} · {{ $share->created_at->diffForHumans() }}</span>
+                            @if($share->permalink)<a href="{{ $share->permalink }}" target="_blank" class="text-brand-600 underline">open</a>@endif
+                            @if($share->status === 'processing')<button type="submit" form="form-share-check-{{ $share->id }}" class="text-brand-600 underline">check</button>@endif
+                            @if($share->status === 'failed')<span class="truncate text-red-600" title="{{ $share->response }}">{{ \Illuminate\Support\Str::limit($share->response, 60) }}</span>@endif
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+            <p class="mt-3 text-xs text-ink-500">Reels: <a href="{{ route('admin.reels.create', ['post' => $post->id]) }}" class="text-brand-600 underline">create a reel from this story</a>.</p>
+        </section>
+        @endif
+
         {{-- Category --}}
         <section class="card p-5">
             <h2 class="mb-3 text-lg font-bold">Category</h2>
@@ -248,6 +286,8 @@
     {{-- Action forms live outside the main form; buttons in the Google card target them via form="…" --}}
     <form id="form-inspect" method="post" action="{{ route('admin.posts.inspect', $post) }}" class="hidden">@csrf</form>
     <form id="form-index-request" method="post" action="{{ route('admin.posts.index-request', $post) }}" class="hidden">@csrf</form>
+    <form id="form-instagram" method="post" action="{{ route('admin.posts.share.instagram', $post) }}" class="hidden">@csrf</form>
+    @foreach($shares as $share)<form id="form-share-check-{{ $share->id }}" method="post" action="{{ route('admin.shares.check', $share) }}" class="hidden">@csrf</form>@endforeach
 @endif
 @endsection
 @section('content')

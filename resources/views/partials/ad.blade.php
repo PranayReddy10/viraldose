@@ -1,6 +1,6 @@
 @php $ads = \App\Models\Ad::forSlot($slot); @endphp
 @foreach($ads as $ad)
-    <div class="ad-slot ad-{{ $slot }} my-4 text-center" data-ad-slot="{{ $slot }}">
+    <div class="ad-slot ad-{{ $slot }} my-4 text-center {{ $ad->deviceClass() }}" data-ad-slot="{{ $slot }}">
         @if($ad->code)
             {!! $ad->code !!}
         @elseif($ad->image)

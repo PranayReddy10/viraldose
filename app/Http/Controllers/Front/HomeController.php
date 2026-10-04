@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Front;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Post;
+use App\Models\Reel;
 use App\Services\Seo;
 use Illuminate\Support\Facades\Cache;
 
@@ -40,6 +41,8 @@ class HomeController extends Controller
             $data['slider'] = $data['latest']->take(3);
             $data['latest'] = $data['latest']->slice(3)->values();
         }
+
+        $data['reels'] = setting('reels_enabled', 1) ? Reel::homeStrip(10) : collect();
 
         return view('front.home', $data);
     }

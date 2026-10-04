@@ -68,17 +68,24 @@
         <script async src="https://www.googletagmanager.com/gtag/js?id={{ setting('google_analytics_id') }}"></script>
         <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{{ setting('google_analytics_id') }}');</script>
     @endif
-    @if(setting('adsense_client_id') && app()->isProduction())
+    @if(setting('ads_enabled', 1) && setting('adsense_client_id') && app()->isProduction())
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ str_starts_with(setting('adsense_client_id'), 'ca-') ? setting('adsense_client_id') : 'ca-'.setting('adsense_client_id') }}" crossorigin="anonymous"></script>
+        @if(setting('adsense_auto_ads'))<script>(adsbygoogle=window.adsbygoogle||[]).push({google_ad_client:"{{ str_starts_with(setting('adsense_client_id'), 'ca-') ? setting('adsense_client_id') : 'ca-'.setting('adsense_client_id') }}",enable_page_level_ads:true});</script>@endif
     @endif
+    {{-- Settings → Header Code --}}
     {!! setting('head_scripts') !!}
+    @if(setting('custom_css'))<style id="custom-css">{!! setting('custom_css') !!}</style>@endif
     @stack('head')
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col @hasSection('immersive') bg-black @endif">
+{{-- Settings → Body Code (after <body>) --}}
+{!! setting('body_start_scripts') !!}
 <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-white focus:p-2">Skip to content</a>
 @hasSection('progress')<div id="progress-bar" class="fixed top-0 left-0 z-50 h-1 bg-brand-600" style="width:0"></div>@endif
 
-@include('partials.header')
+@sectionMissing('immersive')
+    @include('partials.header')
+@endif
 
 <main id="main" class="flex-1">
     @if(session('status'))
@@ -87,12 +94,16 @@
     @yield('content')
 </main>
 
-@include('partials.footer')
+@sectionMissing('immersive')
+    @include('partials.footer')
+    @include('partials.mobile-sticky-ad')
+@endif
 
 <button id="back-to-top" type="button" aria-label="Back to top" class="hidden fixed bottom-5 right-5 z-40 rounded-full bg-ink-900/80 p-3 text-white shadow-lg hover:bg-brand-600">
     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>
 </button>
 
+{{-- Settings → Body Code (before </body>) --}}
 {!! setting('body_scripts') !!}
 @stack('scripts')
 </body>

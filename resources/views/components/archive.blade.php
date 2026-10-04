@@ -11,11 +11,13 @@
     </header>
     <div class="grid gap-10 lg:grid-cols-3">
         <div class="lg:col-span-2">
+            @unless(request()->routeIs('category.show'))@include('partials.ad', ['slot' => 'category_top'])@endunless
             {{ $before ?? '' }}
             @if($posts && $posts->count())
                 <div class="grid gap-8 sm:grid-cols-2">
                     @foreach($posts as $post)
                         <x-post-card :post="$post" heading="h2" :eager="$loop->first" />
+                        @if($loop->iteration % 6 === 0 && ! $loop->last)<div class="sm:col-span-2">@include('partials.ad', ['slot' => 'archive_in_grid'])</div>@endif
                     @endforeach
                 </div>
                 <div class="mt-10">{{ $posts->links() }}</div>

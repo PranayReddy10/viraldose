@@ -1,0 +1,2 @@
+DejaVu Sans fonts — Copyright (c) 2003 by Bitstream, Inc. and DejaVu changes are in the public domain.
+Distributed under the Bitstream Vera Fonts license (free to use, modify and redistribute, see https://dejavu-fonts.github.io/License.html).

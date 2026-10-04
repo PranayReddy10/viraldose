@@ -75,6 +75,24 @@ class Setting extends Model
             'google_auto_index' => 1,
             'indexnow_enabled' => 1,
             'indexnow_key' => '',
+            // Code injection
+            'body_start_scripts' => '',
+            'custom_css' => '',
+            // Ads
+            'ads_enabled' => 1,
+            'adsense_auto_ads' => 0,
+            'mobile_sticky_ad' => 1,
+            // Instagram
+            'instagram_business_id' => '',
+            'instagram_access_token' => '',
+            'instagram_username' => 'viraldose_news',
+            'instagram_auto_share' => 0,
+            'instagram_hashtags' => '#viraldose #news #breakingnews #india',
+            'instagram_caption_template' => "{title}\n\n{excerpt}\n\nRead the full story on viraldose.in (link in bio)\n\n{hashtags}",
+            // Reels
+            'reels_enabled' => 1,
+            'reels_per_page' => 10,
+            'reels_ad_every' => 4,
         ];
     }
 

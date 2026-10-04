@@ -54,6 +54,8 @@ class AdController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'slot' => ['required', Rule::in(array_keys(Ad::SLOTS))],
+            'device' => ['required', Rule::in(array_keys(Ad::DEVICES))],
+            'pages' => ['required', Rule::in(array_keys(Ad::PAGES))],
             'code' => ['nullable', 'string', 'max:20000'],
             'image' => ['nullable', 'image', 'max:2048'],
             'url' => ['nullable', 'url', 'max:500'],

@@ -4,6 +4,7 @@ use App\Models\Ad;
 use App\Models\Category;
 use App\Models\Page;
 use App\Models\Post;
+use App\Models\Reel;
 use App\Models\Tag;
 use App\Models\User;
 use Carbon\Carbon;
@@ -154,6 +155,7 @@ return [
         User::class,
         Page::class,
         Ad::class,
+        Reel::class,
     ],
 
 ];

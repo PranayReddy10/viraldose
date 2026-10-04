@@ -24,6 +24,8 @@
         </section>
     @endif
 
+    @include('partials.ad', ['slot' => 'sidebar_middle'])
+
     <section class="card p-5 bg-ink-100">
         <h2 class="text-lg font-extrabold">Newsletter</h2>
         <p class="mt-1 text-sm text-ink-700">Daily top stories, no spam.</p>
@@ -51,5 +53,5 @@
         </section>
     @endif
 
-    @include('partials.ad', ['slot' => 'sidebar_bottom'])
+    <div class="lg:sticky lg:top-36">@include('partials.ad', ['slot' => 'sidebar_bottom'])</div>
 </aside>

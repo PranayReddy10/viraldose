@@ -38,9 +38,11 @@
                 ['Tags', 'admin.tags.index', 'admin/tags*', 'tag', ['admin', 'editor']],
                 ['Pages', 'admin.pages.index', 'admin/pages*', 'page', ['admin', 'editor']],
                 ['Comments', 'admin.comments.index', 'admin/comments*', 'comments', ['admin', 'editor']],
+                ['Reels', 'admin.reels.index', 'admin/reels*', 'reels', null],
                 ['RSS Feeds', 'admin.feeds.index', 'admin/feeds*', 'rss', ['admin', 'editor']],
                 ['SEO & GROWTH', null, null, null],
                 ['Google Search & Analytics', 'admin.google.index', 'admin/google*', 'google', ['admin', 'editor']],
+                ['Instagram', 'admin.settings.edit', 'admin/settings?tab=instagram', 'instagram', ['admin'], ['tab' => 'instagram']],
                 ['Ad Spaces', 'admin.ads.index', 'admin/ads*', 'ads', ['admin']],
                 ['Redirects', 'admin.redirects.index', 'admin/redirects*', 'redirect', ['admin']],
                 ['Newsletter', 'admin.subscribers.index', 'admin/subscribers*', 'mail', ['admin']],
@@ -59,7 +61,7 @@
                 @endif
                 @php [$label, $route, $pattern, $icon, $roles] = $item; $params = $item[5] ?? []; @endphp
                 @if($roles === null || $user->hasRole(...$roles))
-                    @php $active = $params ? request()->fullUrlIs(route($route, $params)) : (request()->is($pattern) && ! ($pattern === 'admin/posts' && request()->is('admin/posts/create')) && ! ($pattern === 'admin/settings' && request()->query('tab') === 'storage')); @endphp
+                    @php $active = $params ? request()->fullUrlIs(route($route, $params)) : (request()->is($pattern) && ! ($pattern === 'admin/posts' && request()->is('admin/posts/create')) && ! ($pattern === 'admin/settings' && in_array(request()->query('tab'), ['storage', 'instagram'], true))); @endphp
                     <a href="{{ route($route, $params) }}" class="flex items-center gap-3 border-l-4 px-4 py-2.5 text-sm {{ $active ? 'border-brand-600 bg-[#1e282c] text-white' : 'border-transparent hover:bg-[#1e282c] hover:text-white' }}">
                         <x-admin.icon :name="$icon" class="h-4.5 w-4.5 shrink-0" />{{ $label }}
                     </a>

@@ -15,6 +15,8 @@ Route::get('/category/{slug}', [Front\CategoryController::class, 'show'])->name(
 Route::get('/tag/{slug}', [Front\TagController::class, 'show'])->name('tag.show');
 Route::get('/author/{slug}', [Front\AuthorController::class, 'show'])->name('author.show');
 Route::get('/search', Front\SearchController::class)->name('search');
+Route::get('/reels', [Front\ReelController::class, 'index'])->name('reels.index');
+Route::get('/reels/{slug}', [Front\ReelController::class, 'show'])->name('reels.show');
 Route::get('/page/{slug}', [Front\PageController::class, 'show'])->name('page.show');
 
 Route::get('/contact', [Front\PageController::class, 'contact'])->name('contact');
@@ -35,6 +37,7 @@ Route::get('/sitemap-categories.xml', [Front\SitemapController::class, 'categori
 Route::get('/sitemap-tags.xml', [Front\SitemapController::class, 'tags'])->name('sitemap.tags');
 Route::get('/sitemap-pages.xml', [Front\SitemapController::class, 'pages'])->name('sitemap.pages');
 Route::get('/sitemap-authors.xml', [Front\SitemapController::class, 'authors'])->name('sitemap.authors');
+Route::get('/sitemap-reels.xml', [Front\SitemapController::class, 'reels'])->name('sitemap.reels');
 Route::get('/news-sitemap.xml', [Front\SitemapController::class, 'news'])->name('sitemap.news');
 Route::get('/robots.txt', [Front\SitemapController::class, 'robots'])->name('robots');
 Route::get('/{key}.txt', [Front\SitemapController::class, 'indexNowKey'])->where('key', '[a-f0-9]{32}')->name('indexnow.key');
@@ -68,6 +71,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('post-files/{file}', [Admin\PostController::class, 'destroyFile'])->name('posts.files.destroy');
         Route::post('posts/{post}/inspect', [Admin\GoogleController::class, 'inspect'])->name('posts.inspect');
         Route::post('posts/{post}/request-indexing', [Admin\GoogleController::class, 'requestIndexing'])->name('posts.index-request');
+        Route::post('posts/{post}/share/instagram', [Admin\SocialShareController::class, 'instagram'])->name('posts.share.instagram');
+        Route::get('posts/{post}/share/card', [Admin\SocialShareController::class, 'card'])->name('posts.share.card');
+        Route::post('shares/{share}/check', [Admin\SocialShareController::class, 'check'])->name('shares.check');
+        Route::delete('shares/{share}', [Admin\SocialShareController::class, 'destroy'])->name('shares.destroy');
+        Route::resource('reels', Admin\ReelController::class)->except(['show']);
         Route::post('media/upload', [Admin\MediaController::class, 'upload'])->name('media.upload');
 
         // Editors + admins
@@ -100,6 +108,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('settings', [Admin\SettingController::class, 'edit'])->name('settings.edit');
             Route::put('settings', [Admin\SettingController::class, 'update'])->name('settings.update');
             Route::post('settings/test-storage', [Admin\SettingController::class, 'testStorage'])->name('settings.test-storage');
+            Route::post('settings/test-instagram', [Admin\SettingController::class, 'testInstagram'])->name('settings.test-instagram');
             Route::get('subscribers/export', [Admin\SubscriberController::class, 'export'])->name('subscribers.export');
             Route::resource('subscribers', Admin\SubscriberController::class)->only(['index', 'destroy']);
             Route::resource('messages', Admin\MessageController::class)->only(['index', 'show', 'destroy']);
