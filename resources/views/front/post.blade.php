@@ -6,7 +6,9 @@
     $shareUrl = urlencode($post->url());
     $shareText = urlencode($post->title);
     $inContentAds = \App\Models\Ad::forSlot('post_in_content');
-    $content = $post->content;
+    $embeds = app(\App\Services\EmbedRenderer::class);
+    $content = $embeds->render($post->content);
+    $video = $post->video();
     if ($inContentAds->isNotEmpty()) {
         $adHtml = view('partials.ad', ['slot' => 'post_in_content'])->render();
         $parts = preg_split('/(<\/p>)/i', $content, 4, PREG_SPLIT_DELIM_CAPTURE);
@@ -54,7 +56,36 @@
                 <button type="button" data-share class="btn-outline">Share / Copy link</button>
             </div>
 
-            @if($post->image)
+            @if($video)
+                <figure class="mt-6 embed embed-video">
+                    @if($video['type'] === 'file')
+                        <video controls preload="metadata" playsinline class="w-full rounded-lg bg-black aspect-video" @if($post->imageUrl('large')) poster="{{ $post->imageUrl('large') }}" @endif>
+                            <source src="{{ $video['src'] }}">Your browser does not support video playback.
+                        </video>
+                    @else
+                        <iframe src="{{ $video['src'] }}" title="{{ $post->title }}" loading="eager" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" class="w-full rounded-lg aspect-video bg-black"></iframe>
+                    @endif
+                    @if($post->image_caption)<figcaption class="mt-2 text-center text-xs text-ink-500">{{ $post->image_caption }}</figcaption>@endif
+                </figure>
+            @elseif($post->post_type === 'audio' && $post->audio_url)
+                <div class="mt-6 rounded-lg border border-ink-100 p-4 sm:flex sm:items-center sm:gap-4">
+                    @if($post->image)<div class="mb-3 w-full overflow-hidden rounded aspect-video sm:mb-0 sm:w-40 sm:aspect-square"><x-post-image :post="$post" size="small" sizes="160px" :eager="true" /></div>@endif
+                    <div class="min-w-0 flex-1"><p class="mb-2 text-xs font-bold uppercase text-ink-500">Listen</p><audio controls preload="metadata" class="w-full" src="{{ $post->audio_url }}"></audio></div>
+                </div>
+            @elseif($post->post_type === 'gallery' && $post->images->isNotEmpty())
+                <section class="mt-6" aria-label="Photo gallery">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        @foreach($post->images as $image)
+                            <figure class="{{ $loop->first ? 'sm:col-span-2' : '' }}">
+                                <a href="{{ $image->url('large') }}" target="_blank" rel="noopener" class="block overflow-hidden rounded-lg bg-ink-100 {{ $loop->first ? 'aspect-video' : 'aspect-[4/3]' }}">
+                                    <img src="{{ $image->url($loop->first ? 'large' : 'medium') }}" alt="{{ $image->caption ?: $post->title.' – photo '.$loop->iteration }}" width="{{ $loop->first ? 1200 : 800 }}" height="{{ $loop->first ? 675 : 600 }}" loading="{{ $loop->first ? 'eager' : 'lazy' }}" decoding="async" class="h-full w-full object-cover">
+                                </a>
+                                <figcaption class="mt-1 text-xs text-ink-500">{{ $loop->iteration }}/{{ $post->images->count() }}@if($image->caption) · {{ $image->caption }}@endif</figcaption>
+                            </figure>
+                        @endforeach
+                    </div>
+                </section>
+            @elseif($post->image)
                 <figure class="mt-6">
                     <div class="overflow-hidden rounded-lg aspect-video bg-ink-100">
                         <x-post-image :post="$post" size="large" sizes="(min-width: 1024px) 66vw, 100vw" :eager="true" />
@@ -69,7 +100,7 @@
                 {!! $content !!}
             </div>
 
-            @if($post->images->isNotEmpty())
+            @if($post->images->isNotEmpty() && $post->post_type !== 'gallery')
                 <section class="mt-8" aria-label="Photo gallery">
                     <h2 class="section-title">Gallery</h2>
                     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -202,3 +233,4 @@
     </div>
 </div>
 @endsection
+@push('scripts'){!! $embeds->scripts() !!}@endpush

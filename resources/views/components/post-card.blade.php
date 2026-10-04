@@ -25,7 +25,7 @@
 
 @elseif($variant === 'list')
     <article class="flex gap-4">
-        <a href="{{ $post->url() }}" class="block w-28 shrink-0 overflow-hidden rounded-md aspect-[4/3] sm:w-40" aria-hidden="true" tabindex="-1">
+        <a href="{{ $post->url() }}" class="relative block w-28 shrink-0 overflow-hidden rounded-md aspect-[4/3] sm:w-40" aria-hidden="true" tabindex="-1">
             <x-post-image :post="$post" size="small" sizes="160px" />
         </a>
         <div class="min-w-0 flex-1">
@@ -38,7 +38,7 @@
 
 @elseif($variant === 'compact')
     <article class="flex gap-3">
-        <a href="{{ $post->url() }}" class="block w-20 shrink-0 overflow-hidden rounded aspect-square" aria-hidden="true" tabindex="-1">
+        <a href="{{ $post->url() }}" class="relative block w-20 shrink-0 overflow-hidden rounded aspect-square" aria-hidden="true" tabindex="-1">
             <x-post-image :post="$post" size="small" sizes="80px" />
         </a>
         <div class="min-w-0">
@@ -49,7 +49,7 @@
 
 @else
     <article class="group">
-        <a href="{{ $post->url() }}" class="block overflow-hidden rounded-lg aspect-video" aria-hidden="true" tabindex="-1">
+        <a href="{{ $post->url() }}" class="relative block overflow-hidden rounded-lg aspect-video" aria-hidden="true" tabindex="-1">
             <x-post-image :post="$post" size="medium" :eager="$eager" class="transition duration-500 group-hover:scale-105" />
         </a>
         <div class="mt-3">

@@ -19,7 +19,17 @@
         {{-- Post details --}}
         <section class="card p-5">
             <h2 class="mb-4 text-lg font-bold">Post Details</h2>
-            <x-admin.field label="Title" name="title" :value="$post->title" required :max="200" counter slug-source />
+            <div class="grid gap-4 sm:grid-cols-[1fr_180px]">
+                <x-admin.field label="Title" name="title" :value="$post->title" required :max="200" counter slug-source />
+                <x-admin.select label="Post Type" name="post_type" :value="$post->post_type ?: 'article'" :options="\App\Models\Post::TYPES" />
+            </div>
+            <div data-post-type="video" class="hidden">
+                <x-admin.field label="Video URL" name="video_url" type="url" :value="$post->video_url" help="YouTube, Vimeo or a direct .mp4 link. Shown as the main media above the article; the featured image becomes the poster/thumbnail." />
+            </div>
+            <div data-post-type="audio" class="hidden">
+                <x-admin.field label="Audio URL" name="audio_url" type="url" :value="$post->audio_url" help="Direct .mp3/.m4a link. An audio player is shown above the article." />
+            </div>
+            <div data-post-type="gallery" class="hidden mb-4 rounded bg-ink-100 px-3 py-2 text-xs text-ink-700">Gallery posts show the <strong>Additional Images</strong> as a large photo grid above the article text. Add captions for each photo.</div>
             <x-admin.field label="Slug" name="slug" :value="$post->slug" help="If you leave it blank, it will be generated automatically. Changing a published slug breaks old links — add a redirect." slug-target />
             <x-admin.field label="Summary & Description (Meta Tag)" name="excerpt" type="textarea" :value="$post->excerpt" :max="500" counter help="Shown in listings and used as the meta description unless you set one below." />
             <x-admin.field label="Keywords (Meta Tag)" name="meta_keywords" :value="$post->meta_keywords" help="Comma separated. The first keyword is the focus keyword for the SEO check." />
@@ -43,10 +53,23 @@
         {{-- Content --}}
         <section class="card p-5">
             <h2 class="mb-4 text-lg font-bold">Content</h2>
+            <div id="editor-toolbar">
+                <span class="ql-formats"><select class="ql-header"><option value="2">Heading 2</option><option value="3">Heading 3</option><option value="4">Heading 4</option><option selected>Normal</option></select></span>
+                <span class="ql-formats"><button class="ql-bold" title="Bold"></button><button class="ql-italic" title="Italic"></button><button class="ql-underline" title="Underline"></button><button class="ql-strike" title="Strike"></button></span>
+                <span class="ql-formats"><button class="ql-list" value="ordered" title="Numbered list"></button><button class="ql-list" value="bullet" title="Bullet list"></button></span>
+                <span class="ql-formats"><button class="ql-blockquote" title="Quote"></button><button class="ql-code-block" title="Code"></button><button class="ql-link" title="Link"></button><button class="ql-image" title="Upload image"></button><select class="ql-align"></select></span>
+                <span class="ql-formats ql-social">
+                    <button type="button" class="ql-youtube" title="Embed YouTube video"><svg viewBox="0 0 24 24" class="ql-stroke-none"><path fill="#ff0000" d="M23 7.2a3 3 0 00-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 001 7.2 31 31 0 00.5 12 31 31 0 001 16.8a3 3 0 002.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 002.1-2.1c.4-1.6.5-3.2.5-4.8s-.1-3.2-.5-4.8z"/><path fill="#fff" d="M9.7 15.1V8.9l6 3.1z"/></svg></button>
+                    <button type="button" class="ql-twitter" title="Embed X / Twitter post"><svg viewBox="0 0 24 24"><path fill="#000" d="M18.2 2h3.4l-7.4 8.5L23 22h-6.8l-5.3-7-6.1 7H1.4l7.9-9.1L1 2h7l4.8 6.4zm-1.2 18h1.9L7.1 3.9H5.1z"/></svg></button>
+                    <button type="button" class="ql-instagram" title="Embed Instagram post"><svg viewBox="0 0 24 24"><defs><linearGradient id="ig" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#fdc468"/><stop offset=".5" stop-color="#df4996"/><stop offset="1" stop-color="#4f5bd5"/></linearGradient></defs><rect x="2" y="2" width="20" height="20" rx="5" fill="url(#ig)"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="#fff" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.3" fill="#fff"/></svg></button>
+                    <button type="button" class="ql-facebook" title="Embed Facebook post"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#1877f2"/><path fill="#fff" d="M13.3 20v-7h2.3l.4-2.8h-2.7V8.5c0-.8.2-1.3 1.4-1.3H16V4.7c-.2 0-1.1-.1-2.1-.1-2.1 0-3.5 1.3-3.5 3.6v2H8v2.8h2.4v7z"/></svg></button>
+                </span>
+                <span class="ql-formats"><button class="ql-clean" title="Clear formatting"></button></span>
+            </div>
             <div id="editor" data-upload-url="{{ route('admin.media.upload') }}" class="bg-white"></div>
             <textarea id="content" name="content" class="hidden">{{ old('content', $post->content) }}</textarea>
             @error('content')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
-            <p class="mt-2 text-xs text-ink-500">Use the image button to upload inline photos; the video button embeds YouTube. Links to other ViralDose stories help Google crawl the site.</p>
+            <p class="mt-2 text-xs text-ink-500">Image button uploads inline photos. The coloured buttons embed a <strong>YouTube video</strong>, <strong>X post</strong>, <strong>Instagram post</strong> or <strong>Facebook post</strong> at the cursor — paste the public URL. Links to other ViralDose stories help Google crawl the site.</p>
         </section>
 
         {{-- SEO --}}

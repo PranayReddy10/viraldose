@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\EmbedRenderer;
 use App\Services\ImageService;
 use App\Support\PostUrl;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,11 +28,18 @@ class Post extends Model
 
     public const STATUSES = [self::STATUS_DRAFT, self::STATUS_PUBLISHED, self::STATUS_ARCHIVED];
 
+    public const TYPES = [
+        'article' => 'Article',
+        'video' => 'Video',
+        'gallery' => 'Gallery',
+        'audio' => 'Audio',
+    ];
+
     protected $fillable = [
         'user_id', 'category_id', 'title', 'slug', 'excerpt', 'content', 'image', 'image_alt', 'image_caption',
         'status', 'published_at', 'is_featured', 'is_breaking', 'is_slider', 'is_recommended', 'allow_comments',
         'meta_title', 'meta_description', 'meta_keywords', 'canonical_url', 'noindex', 'reading_time',
-        'source_name', 'source_url', 'legacy_id', 'language', 'rss_feed_id', 'feed_guid',
+        'source_name', 'source_url', 'legacy_id', 'language', 'post_type', 'video_url', 'audio_url', 'rss_feed_id', 'feed_guid',
         'index_status', 'index_coverage', 'index_checked_at', 'last_crawled_at', 'indexing_requested_at',
     ];
 
@@ -169,7 +177,7 @@ class Post extends Model
     public function scopeForListing(Builder $query): Builder
     {
         return $query->select([
-            'id', 'user_id', 'category_id', 'title', 'slug', 'excerpt', 'image', 'image_alt',
+            'id', 'user_id', 'category_id', 'title', 'slug', 'excerpt', 'image', 'image_alt', 'post_type', 'video_url',
             'published_at', 'views', 'reading_time', 'is_featured', 'is_breaking',
         ])->with(['category:id,name,slug,color', 'author:id,name,slug']);
     }
@@ -226,6 +234,24 @@ class Post extends Model
     public function imageAltText(): string
     {
         return $this->image_alt ?: $this->title;
+    }
+
+    public function isVideo(): bool
+    {
+        return $this->post_type === 'video' && EmbedRenderer::video($this->video_url) !== null;
+    }
+
+    /**
+     * @return array{type: string, src: string, poster: ?string, id: ?string}|null
+     */
+    public function video(): ?array
+    {
+        return EmbedRenderer::video($this->video_url);
+    }
+
+    public function typeLabel(): string
+    {
+        return self::TYPES[$this->post_type] ?? 'Article';
     }
 
     public function recordView(?string $sessionKey = null): void

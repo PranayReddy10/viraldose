@@ -38,7 +38,7 @@
                 <td class="max-w-md">
                     <a href="{{ route('admin.posts.edit', $post) }}" class="font-medium hover:text-brand-600">{{ $post->title }}</a>
                     <div class="mt-0.5 flex flex-wrap gap-1 text-[10px] font-bold uppercase text-ink-500">
-                        @if($post->language !== 'en')<span>{{ strtoupper($post->language) }}</span>@endif @if($post->is_slider)<span>Slider</span>@endif @if($post->is_featured)<span>Featured</span>@endif @if($post->is_breaking)<span class="text-brand-600">Breaking</span>@endif @if($post->rss_feed_id)<span class="text-indigo-600">RSS</span>@endif @if($post->noindex)<span class="text-red-600">Noindex</span>@endif
+                        @if($post->post_type && $post->post_type !== 'article')<span class="text-purple-700">{{ $post->typeLabel() }}</span>@endif @if($post->language !== 'en')<span>{{ strtoupper($post->language) }}</span>@endif @if($post->is_slider)<span>Slider</span>@endif @if($post->is_featured)<span>Featured</span>@endif @if($post->is_breaking)<span class="text-brand-600">Breaking</span>@endif @if($post->rss_feed_id)<span class="text-indigo-600">RSS</span>@endif @if($post->noindex)<span class="text-red-600">Noindex</span>@endif
                     </div>
                 </td>
                 <td>{{ $post->category?->name }}</td>

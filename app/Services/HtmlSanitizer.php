@@ -21,7 +21,7 @@ class HtmlSanitizer
         'figure' => [], 'figcaption' => [],
         'table' => [], 'thead' => [], 'tbody' => [], 'tfoot' => [], 'tr' => [], 'th' => ['colspan', 'rowspan'], 'td' => ['colspan', 'rowspan'],
         'iframe' => ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder', 'loading', 'title'],
-        'div' => ['class'], 'span' => ['class'],
+        'div' => ['class', 'data-provider', 'data-url'], 'span' => ['class'],
     ];
 
     private const IFRAME_HOSTS = [
@@ -29,7 +29,7 @@ class HtmlSanitizer
         'platform.twitter.com', 'www.instagram.com', 'www.facebook.com', 'open.spotify.com', 'www.google.com',
     ];
 
-    private const ALLOWED_CLASSES = ['ql-align-center', 'ql-align-right', 'ql-align-justify', 'ql-indent-1', 'ql-indent-2', 'embed', 'embed-responsive', 'table-wrap'];
+    private const ALLOWED_CLASSES = ['ql-align-center', 'ql-align-right', 'ql-align-justify', 'ql-indent-1', 'ql-indent-2', 'embed', 'embed-responsive', 'embed-label', 'embed-url', 'table-wrap'];
 
     public function clean(?string $html): string
     {
@@ -147,6 +147,16 @@ class HtmlSanitizer
         }
         if ($tag === 'iframe') {
             $el->setAttribute('loading', 'lazy');
+        }
+        if ($tag === 'div' && ($el->hasAttribute('data-provider') || $el->hasAttribute('data-url'))) {
+            $provider = strtolower($el->getAttribute('data-provider'));
+            $url = $el->getAttribute('data-url');
+            if (! in_array($provider, EmbedRenderer::PROVIDERS, true) || ! EmbedRenderer::validUrl($provider, $url)) {
+                $el->removeAttribute('data-provider');
+                $el->removeAttribute('data-url');
+            } else {
+                $el->setAttribute('class', 'embed');
+            }
         }
     }
 

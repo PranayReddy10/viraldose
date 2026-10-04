@@ -228,6 +228,21 @@ class Seo
         }
         $this->addJsonLd($article);
 
+        if ($video = $post->video()) {
+            $this->type('video.other');
+            $this->addJsonLd(array_filter([
+                '@context' => 'https://schema.org',
+                '@type' => 'VideoObject',
+                'name' => $post->title,
+                'description' => $post->seoDescription(),
+                'thumbnailUrl' => array_values(array_filter([$post->imageUrl('large'), $video['poster']])),
+                'uploadDate' => $this->publishedTime,
+                'embedUrl' => $video['type'] === 'file' ? null : $video['src'],
+                'contentUrl' => $video['type'] === 'file' ? $video['src'] : null,
+                'publisher' => static::publisher(),
+            ]));
+        }
+
         return $this;
     }
 

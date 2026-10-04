@@ -111,6 +111,15 @@ codes, structured data, sitemaps, fast mobile pages). What you still have to do,
 
 Give it 2–6 weeks after relaunch; watch *Pages → Not indexed* shrink in Search Console.
 
+## Post types & social embeds
+
+Each article has a **type**: Article, Video (YouTube / Vimeo / MP4 URL shown as the main media, `VideoObject`
+schema, play badge on cards), Gallery (the additional images become a large photo grid above the text) or Audio
+(MP3 player). In the editor toolbar, the coloured buttons embed a **YouTube video, X (Twitter) post, Instagram
+post or Facebook post** at the cursor from its public URL. Embeds are stored as safe placeholders and turned into
+the real embed on the public page (YouTube via the privacy-enhanced domain, X and Instagram via their official
+scripts loaded only on pages that need them).
+
 ## Google Search Console, Indexing API & Analytics
 
 One Google **service-account JSON key** (Settings → Google & Indexing) powers:

@@ -78,12 +78,58 @@ document.addEventListener('DOMContentLoaded', () => {
     const editorEl = document.getElementById('editor');
     const hidden = document.getElementById('content');
     if (editorEl && hidden) {
+        // Social embed block: stored as <div class="embed" data-provider data-url> and
+        // rendered into the real Instagram / X / YouTube embed on the public page.
+        const BlockEmbed = Quill.import('blots/block/embed');
+        const PROVIDERS = {
+            youtube: { label: 'YouTube video', test: (u) => /youtu\.be\/|youtube(-nocookie)?\.com\/(watch|embed|shorts|live)/.test(u), prompt: 'Paste the YouTube video URL' },
+            twitter: { label: 'X / Twitter post', test: (u) => /(twitter|x)\.com\/.+\/status\/\d+/.test(u), prompt: 'Paste the X (Twitter) post URL' },
+            instagram: { label: 'Instagram post', test: (u) => /instagram\.com\/(p|reel|reels|tv)\//.test(u), prompt: 'Paste the Instagram post / reel URL' },
+            facebook: { label: 'Facebook post', test: (u) => /facebook\.com\/|fb\.watch\//.test(u), prompt: 'Paste the Facebook post / video URL' },
+        };
+        class SocialEmbed extends BlockEmbed {
+            static blotName = 'socialEmbed';
+            static tagName = 'div';
+            static className = 'embed';
+            static create(value) {
+                const node = super.create();
+                node.setAttribute('data-provider', value.provider);
+                node.setAttribute('data-url', value.url);
+                node.setAttribute('contenteditable', 'false');
+                const label = document.createElement('span');
+                label.className = 'embed-label';
+                label.textContent = (PROVIDERS[value.provider] || { label: value.provider }).label;
+                const url = document.createElement('span');
+                url.className = 'embed-url';
+                url.textContent = value.url;
+                node.append(label, url);
+                return node;
+            }
+            static value(node) {
+                return { provider: node.getAttribute('data-provider'), url: node.getAttribute('data-url') };
+            }
+        }
+        Quill.register(SocialEmbed, true);
+
+        const insertEmbed = (quill, provider) => {
+            const url = (window.prompt(PROVIDERS[provider].prompt) || '').trim();
+            if (!url) return;
+            if (!/^https:\/\//.test(url) || !PROVIDERS[provider].test(url)) {
+                alert('That does not look like a ' + PROVIDERS[provider].label + ' URL.');
+                return;
+            }
+            const range = quill.getSelection(true);
+            quill.insertEmbed(range.index, 'socialEmbed', { provider, url }, 'user');
+            quill.insertText(range.index + 1, '\n', 'user');
+            quill.setSelection(range.index + 2);
+        };
+
         const quill = new Quill(editorEl, {
             theme: 'snow',
             placeholder: 'Write your story…',
             modules: {
                 toolbar: {
-                    container: [
+                    container: document.getElementById('editor-toolbar') || [
                         [{ header: [2, 3, 4, false] }],
                         ['bold', 'italic', 'underline', 'strike'],
                         [{ list: 'ordered' }, { list: 'bullet' }],
@@ -93,6 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         ['clean'],
                     ],
                     handlers: {
+                        youtube() { insertEmbed(this.quill, 'youtube'); },
+                        twitter() { insertEmbed(this.quill, 'twitter'); },
+                        instagram() { insertEmbed(this.quill, 'instagram'); },
+                        facebook() { insertEmbed(this.quill, 'facebook'); },
                         image() {
                             const input = document.createElement('input');
                             input.type = 'file';
@@ -148,6 +198,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hidden) hidden.value = btn.dataset.saveAs;
         }),
     );
+
+    // Post type → show matching media field
+    const typeSel = document.querySelector('[name=post_type]');
+    if (typeSel) {
+        const sync = () => document.querySelectorAll('[data-post-type]').forEach((el) => el.classList.toggle('hidden', el.dataset.postType !== typeSel.value));
+        typeSel.addEventListener('change', sync);
+        sync();
+    }
 
     // Scheduled post toggle
     const sched = document.getElementById('scheduled-toggle');
