@@ -1,0 +1,146 @@
+import Quill from 'quill';
+
+// Admin panel helpers: slug generation, SEO counters, Google snippet preview,
+// Quill editor with image upload, confirm dialogs, bulk selection.
+const slugify = (s) =>
+    s
+        .toString()
+        .normalize('NFKD')
+        .replace(/[̀-ͯ]/g, '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/[\s_-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Sidebar toggle (mobile)
+    const sb = document.getElementById('admin-sidebar');
+    const sbBtn = document.getElementById('admin-sidebar-toggle');
+    if (sb && sbBtn) sbBtn.addEventListener('click', () => sb.classList.toggle('-translate-x-full'));
+
+    // Slug auto-fill
+    const title = document.querySelector('[data-slug-source]');
+    const slug = document.querySelector('[data-slug-target]');
+    if (title && slug) {
+        let touched = slug.value !== '';
+        slug.addEventListener('input', () => (touched = slug.value !== ''));
+        title.addEventListener('input', () => {
+            if (!touched) slug.value = slugify(title.value);
+            updatePreview();
+        });
+    }
+
+    // Character counters
+    document.querySelectorAll('[data-counter]').forEach((el) => {
+        const target = document.getElementById(el.dataset.counter);
+        const max = parseInt(el.dataset.max || '0', 10);
+        if (!target) return;
+        const render = () => {
+            const n = target.value.length;
+            el.textContent = `${n}${max ? ' / ' + max : ''}`;
+            el.classList.toggle('text-red-600', max && n > max);
+            el.classList.toggle('text-green-600', max && n > 0 && n <= max);
+        };
+        target.addEventListener('input', render);
+        render();
+    });
+
+    // Google snippet preview
+    const pvTitle = document.getElementById('pv-title');
+    const pvDesc = document.getElementById('pv-desc');
+    const pvUrl = document.getElementById('pv-url');
+    const metaTitle = document.querySelector('[name=meta_title]');
+    const metaDesc = document.querySelector('[name=meta_description]');
+    const excerpt = document.querySelector('[name=excerpt]');
+    const site = document.body.dataset.siteName || '';
+    const base = document.body.dataset.siteUrl || '';
+    function updatePreview() {
+        if (!pvTitle) return;
+        const t = (metaTitle && metaTitle.value) || (title && title.value) || 'Post title';
+        pvTitle.textContent = t.length > 60 ? t.slice(0, 57) + '…' : t + (metaTitle && metaTitle.value ? '' : ' - ' + site);
+        const d = (metaDesc && metaDesc.value) || (excerpt && excerpt.value) || 'Meta description will appear here.';
+        pvDesc.textContent = d.length > 160 ? d.slice(0, 157) + '…' : d;
+        if (pvUrl) pvUrl.textContent = base + '/' + (slug && slug.value ? slug.value : 'post-slug');
+    }
+    [metaTitle, metaDesc, excerpt, slug].forEach((el) => el && el.addEventListener('input', updatePreview));
+    updatePreview();
+
+    // Quill editor
+    const editorEl = document.getElementById('editor');
+    const hidden = document.getElementById('content');
+    if (editorEl && hidden) {
+        const quill = new Quill(editorEl, {
+            theme: 'snow',
+            placeholder: 'Write your story…',
+            modules: {
+                toolbar: {
+                    container: [
+                        [{ header: [2, 3, 4, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ list: 'ordered' }, { list: 'bullet' }],
+                        ['blockquote', 'code-block'],
+                        ['link', 'image', 'video'],
+                        [{ align: [] }],
+                        ['clean'],
+                    ],
+                    handlers: {
+                        image() {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = async () => {
+                                const file = input.files[0];
+                                if (!file) return;
+                                const fd = new FormData();
+                                fd.append('file', file);
+                                const res = await fetch(editorEl.dataset.uploadUrl, {
+                                    method: 'POST',
+                                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, Accept: 'application/json' },
+                                    body: fd,
+                                });
+                                if (!res.ok) {
+                                    alert('Upload failed');
+                                    return;
+                                }
+                                const data = await res.json();
+                                const range = quill.getSelection(true);
+                                quill.insertEmbed(range.index, 'image', data.url, 'user');
+                                quill.setSelection(range.index + 1);
+                            };
+                            input.click();
+                        },
+                    },
+                },
+            },
+        });
+        quill.root.innerHTML = hidden.value;
+        const sync = () => (hidden.value = quill.root.innerHTML);
+        quill.on('text-change', sync);
+        editorEl.closest('form').addEventListener('submit', sync);
+    }
+
+    // Confirmations
+    document.querySelectorAll('form[data-confirm]').forEach((f) =>
+        f.addEventListener('submit', (e) => {
+            if (!confirm(f.dataset.confirm)) e.preventDefault();
+        }),
+    );
+
+    // Bulk select
+    const all = document.getElementById('select-all');
+    if (all) {
+        all.addEventListener('change', () => document.querySelectorAll('input[name="ids[]"]').forEach((c) => (c.checked = all.checked)));
+    }
+
+    // Image preview
+    document.querySelectorAll('input[type=file][data-preview]').forEach((input) => {
+        input.addEventListener('change', () => {
+            const img = document.getElementById(input.dataset.preview);
+            if (img && input.files[0]) {
+                img.src = URL.createObjectURL(input.files[0]);
+                img.classList.remove('hidden');
+            }
+        });
+    });
+});
