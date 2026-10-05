@@ -123,7 +123,7 @@
                 <button type="submit" class="btn bg-yellow-500 text-white hover:bg-yellow-600" data-save-as="draft">Save as Draft</button>
                 <button type="submit" class="btn-primary flex-1" data-save-as="publish">{{ $post->isPublished() ? 'Update' : 'Publish' }}</button>
             </div>
-            @if($post->exists)<div class="mt-3 text-right"><x-admin.delete-button :action="route('admin.posts.destroy', $post)" label="Move to trash" confirm="Move this post to trash?" /></div>@endif
+            @if($post->exists)<div class="mt-3 text-right"><button type="submit" form="form-trash" class="text-xs font-semibold text-red-600 hover:underline">Move to trash</button></div>@endif
         </section>
 
         {{-- Google index status --}}
@@ -228,12 +228,7 @@
         <section class="card p-5">
             <h2 class="text-lg font-bold">Image</h2>
             <p class="mb-3 text-xs text-ink-500">Main post image</p>
-            <label class="block cursor-pointer rounded-lg border-2 border-dashed border-ink-300 bg-ink-100/40 p-3 text-center hover:border-brand-600">
-                <img id="image-preview" src="{{ $post->imageUrl('medium') ?: '' }}" alt="" class="mx-auto mb-2 w-full rounded aspect-video object-cover {{ $post->image ? '' : 'hidden' }}">
-                <span class="btn-secondary pointer-events-none">Select Image</span>
-                <input type="file" name="image" accept="image/*" data-preview="image-preview" class="sr-only">
-            </label>
-            <p class="mt-1 text-xs text-ink-500">JPG/PNG/WebP up to 5 MB · 1200×675 recommended · WebP sizes generated automatically.</p>
+            <x-admin.file name="image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" button="Select Image" :preview="$post->imageUrl('medium')" preview-class="aspect-video" help="JPG / PNG / WebP / AVIF up to 5 MB · 1200×675 recommended · WebP sizes generated automatically" />
             <x-admin.field label="or Add Image Url" name="image_url" type="url" :value="\Illuminate\Support\Str::startsWith($post->image, 'http') ? $post->image : ''" class="mt-3" />
             <x-admin.field label="Image Description (alt text)" name="image_alt" :value="$post->image_alt" :max="200" help="Describe the image for accessibility and Google Images." />
             <x-admin.field label="Caption" name="image_caption" :value="$post->image_caption" :max="300" />
@@ -255,8 +250,7 @@
                     @endforeach
                 </ul>
             @endif
-            <label class="btn bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"><x-admin.icon name="image" class="h-4 w-4" /> Select Images<input type="file" name="gallery[]" accept="image/*" multiple class="sr-only" data-file-list="gallery-list"></label>
-            <ul id="gallery-list" class="mt-2 space-y-0.5 text-xs text-ink-500"></ul>
+            <x-admin.file name="gallery[]" accept="image/*" :multiple="true" button="Select Images" help="Up to 12 images per save, 5 MB each" />
             @error('gallery.*')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
         </section>
 
@@ -275,8 +269,7 @@
                     @endforeach
                 </ul>
             @endif
-            <label class="btn bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"><x-admin.icon name="file" class="h-4 w-4" /> Select Files<input type="file" name="files[]" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.txt,.csv" multiple class="sr-only" data-file-list="files-list"></label>
-            <ul id="files-list" class="mt-2 space-y-0.5 text-xs text-ink-500"></ul>
+            <x-admin.file name="files[]" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.txt,.csv" :multiple="true" button="Select Files" icon="file" help="PDF, Word, Excel, PowerPoint, ZIP, TXT, CSV · up to 20 MB each" />
             @error('files.*')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
         </section>
     </div>
@@ -284,251 +277,10 @@
 
 @if($post->exists)
     {{-- Action forms live outside the main form; buttons in the Google card target them via form="…" --}}
+    <form id="form-trash" method="post" action="{{ route('admin.posts.destroy', $post) }}" class="hidden" data-confirm="Move this post to trash?">@csrf @method('DELETE')</form>
     <form id="form-inspect" method="post" action="{{ route('admin.posts.inspect', $post) }}" class="hidden">@csrf</form>
     <form id="form-index-request" method="post" action="{{ route('admin.posts.index-request', $post) }}" class="hidden">@csrf</form>
     <form id="form-instagram" method="post" action="{{ route('admin.posts.share.instagram', $post) }}" class="hidden">@csrf</form>
     @foreach($shares as $share)<form id="form-share-check-{{ $share->id }}" method="post" action="{{ route('admin.shares.check', $share) }}" class="hidden">@csrf</form>@endforeach
-@endif
-@endsection
-@section('content')
-@php
-    $catOptions = [];
-    foreach ($categories as $c) { $catOptions[$c->id] = $c->name; foreach ($c->children as $ch) { $catOptions[$ch->id] = '— '.$ch->name; } }
-    $user = auth()->user();
-    $scheduled = old('scheduled', $post->isScheduled());
-@endphp
-<form method="post" action="{{ $post->exists ? route('admin.posts.update', $post) : route('admin.posts.store') }}" enctype="multipart/form-data" class="grid gap-6 xl:grid-cols-3" id="post-form" data-url-format="{{ \App\Support\PostUrl::format() }}">
-    @csrf @if($post->exists) @method('PUT') @endif
-    <input type="hidden" name="save_as" id="save_as" value="">
-
-    <div class="xl:col-span-2 space-y-6">
-        {{-- Post details --}}
-        <section class="card p-5">
-            <h2 class="mb-4 text-lg font-bold">Post Details</h2>
-            <x-admin.field label="Title" name="title" :value="$post->title" required :max="200" counter slug-source />
-            <x-admin.field label="Slug" name="slug" :value="$post->slug" help="If you leave it blank, it will be generated automatically. Changing a published slug breaks old links — add a redirect." slug-target />
-            <x-admin.field label="Summary & Description (Meta Tag)" name="excerpt" type="textarea" :value="$post->excerpt" :max="500" counter help="Shown in listings and used as the meta description unless you set one below." />
-            <x-admin.field label="Keywords (Meta Tag)" name="meta_keywords" :value="$post->meta_keywords" help="Comma separated. The first keyword is the focus keyword for the SEO check." />
-            <div class="grid gap-4 sm:grid-cols-2">
-                <x-admin.field label="Tags" name="tags" :value="$tagString" help="Comma separated, e.g. cricket, ipl 2026" />
-                <x-admin.field label="Optional URL (source)" name="source_url" type="url" :value="$post->source_url" help="Original source link, shown under the article." />
-            </div>
-            <x-admin.field label="Source name" name="source_name" :value="$post->source_name" />
-            <div class="mt-2 grid gap-x-8 gap-y-1 sm:grid-cols-2">
-                @if($user->canManageAllPosts())
-                    <x-admin.checkbox label="Add to Slider" name="is_slider" :checked="$post->is_slider" />
-                    <x-admin.checkbox label="Add to Featured" name="is_featured" :checked="$post->is_featured" />
-                    <x-admin.checkbox label="Add to Breaking" name="is_breaking" :checked="$post->is_breaking" />
-                    <x-admin.checkbox label="Add to Recommended" name="is_recommended" :checked="$post->is_recommended" />
-                @endif
-                <x-admin.checkbox label="Allow comments" name="allow_comments" :checked="$post->allow_comments" />
-                <x-admin.checkbox label="Hide from search engines (noindex)" name="noindex" :checked="$post->noindex" />
-            </div>
-        </section>
-
-        {{-- Content --}}
-        <section class="card p-5">
-            <h2 class="mb-4 text-lg font-bold">Content</h2>
-            <div id="editor" data-upload-url="{{ route('admin.media.upload') }}" class="bg-white"></div>
-            <textarea id="content" name="content" class="hidden">{{ old('content', $post->content) }}</textarea>
-            @error('content')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
-            <p class="mt-2 text-xs text-ink-500">Use the image button to upload inline photos; the video button embeds YouTube. Links to other ViralDose stories help Google crawl the site.</p>
-        </section>
-
-        {{-- SEO --}}
-        <section class="card p-5">
-            <div class="mb-4 flex items-center justify-between">
-                <h2 class="text-lg font-bold">SEO</h2>
-                @if($seo)
-                    <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-bold {{ ['good' => 'bg-green-100 text-green-800', 'ok' => 'bg-yellow-100 text-yellow-800', 'poor' => 'bg-red-100 text-red-800'][$seo['grade']] }}">SEO score {{ $seo['score'] }}/100</span>
-                @endif
-            </div>
-            <div class="mb-5 rounded border border-ink-100 bg-ink-100/40 p-4">
-                <p class="mb-1 text-xs text-ink-500">Google preview</p>
-                <p id="pv-title" class="truncate text-lg leading-tight text-[#1a0dab]">Title</p>
-                <p id="pv-url" class="truncate text-sm text-[#006621]"></p>
-                <p id="pv-desc" class="text-sm text-ink-700 line-clamp-2"></p>
-            </div>
-            <div class="grid gap-x-6 sm:grid-cols-2">
-                <x-admin.field label="Meta title" name="meta_title" :value="$post->meta_title" :max="60" counter help="Blank = post title. Aim for 50–60 characters." />
-                <x-admin.field label="Canonical URL" name="canonical_url" type="url" :value="$post->canonical_url" help="Only if first published elsewhere." />
-            </div>
-            <x-admin.field label="Meta description" name="meta_description" type="textarea" :rows="2" :value="$post->meta_description" :max="160" counter help="Aim for 120–160 characters. Falls back to the summary." />
-            @if($seo)
-                <h3 class="mb-2 mt-4 text-sm font-bold">On-page checks</h3>
-                <ul class="grid gap-1 text-sm sm:grid-cols-2">
-                    @foreach($seo['checks'] as $check)
-                        <li class="flex items-start gap-2 rounded px-2 py-1 {{ ['pass' => 'text-green-800', 'warn' => 'text-yellow-800', 'fail' => 'text-red-800'][$check['status']] }}">
-                            <x-admin.icon :name="['pass' => 'check', 'warn' => 'warn', 'fail' => 'x'][$check['status']]" class="mt-0.5 h-4 w-4 shrink-0" />
-                            <span><strong>{{ $check['label'] }}</strong> <span class="text-ink-700">— {{ $check['hint'] }}</span></span>
-                        </li>
-                    @endforeach
-                </ul>
-            @else
-                <p class="text-xs text-ink-500">Save the post to run the on-page SEO check.</p>
-            @endif
-        </section>
-    </div>
-
-    <div class="space-y-6">
-        {{-- Publish --}}
-        <section class="card p-5">
-            <h2 class="mb-3 text-lg font-bold">Publish</h2>
-            <x-admin.select label="Status" name="status" :value="$post->status" :options="['draft' => 'Draft', 'published' => 'Published', 'archived' => 'Archived']" />
-            @if($user->canManageAllPosts())
-                <x-admin.select label="Author" name="user_id" :value="$post->user_id ?? $user->id" :options="$authors->pluck('name', 'id')" />
-            @endif
-            <label class="mb-2 flex items-center gap-2 text-sm font-medium"><input type="hidden" name="scheduled" value="0"><input type="checkbox" name="scheduled" value="1" id="scheduled-toggle" class="rounded" @checked($scheduled)> Scheduled Post</label>
-            <div id="scheduled-fields" class="{{ $scheduled ? '' : 'hidden' }}">
-                <x-admin.field label="Publish date & time" name="published_at" type="datetime-local" :value="old('published_at', $post->published_at?->format('Y-m-d\TH:i'))" help="Goes live automatically at this time (server time zone {{ config('app.timezone') }})." />
-            </div>
-            <div class="mt-4 flex flex-wrap gap-2">
-                <button type="submit" class="btn bg-yellow-500 text-white hover:bg-yellow-600" data-save-as="draft">Save as Draft</button>
-                <button type="submit" class="btn-primary flex-1" data-save-as="publish">{{ $post->isPublished() ? 'Update' : 'Publish' }}</button>
-            </div>
-            @if($post->exists)<div class="mt-3 text-right"><x-admin.delete-button :action="route('admin.posts.destroy', $post)" label="Move to trash" confirm="Move this post to trash?" /></div>@endif
-        </section>
-
-        {{-- Google index status --}}
-        @if($post->exists)
-        <section class="card p-5">
-            <h2 class="mb-3 flex items-center gap-2 text-lg font-bold"><x-admin.icon name="google" class="h-5 w-5" /> Google</h2>
-            <dl class="space-y-1 text-sm">
-                <div class="flex justify-between"><dt class="text-ink-500">Index status</dt><dd>@include('admin.posts._index_status')</dd></div>
-                @if($post->index_coverage)<div class="flex justify-between gap-3"><dt class="text-ink-500">Coverage</dt><dd class="text-right">{{ $post->index_coverage }}</dd></div>@endif
-                @if($post->last_crawled_at)<div class="flex justify-between"><dt class="text-ink-500">Last crawled</dt><dd>{{ $post->last_crawled_at->diffForHumans() }}</dd></div>@endif
-                @if($post->indexing_requested_at)<div class="flex justify-between"><dt class="text-ink-500">Last submitted</dt><dd>{{ $post->indexing_requested_at->diffForHumans() }}</dd></div>@endif
-            </dl>
-            @if(session('inspection'))
-                @php $r = session('inspection'); @endphp
-                <div class="mt-3 rounded bg-ink-100 p-3 text-xs">
-                    <p><strong>Verdict:</strong> {{ $r['verdict'] }} · {{ $r['coverage'] }}</p>
-                    <p><strong>Robots:</strong> {{ $r['robots'] }} · <strong>Fetch:</strong> {{ $r['fetch'] }} · <strong>Mobile:</strong> {{ $r['mobile'] ?? 'n/a' }}</p>
-                    @if($r['google_canonical'] && $r['google_canonical'] !== $r['user_canonical'])<p class="text-red-700"><strong>Google canonical differs:</strong> {{ $r['google_canonical'] }}</p>@endif
-                    @if($r['link'])<a href="{{ $r['link'] }}" target="_blank" class="underline">Open in Search Console</a>@endif
-                </div>
-            @endif
-            <div class="mt-3 flex flex-wrap gap-2">
-                @if($googleReady)
-                    <button type="submit" form="form-inspect" class="btn-outline !px-3 !py-1.5 text-xs"><x-admin.icon name="search" class="h-4 w-4" /> Inspect URL</button>
-                @endif
-                @if(($googleReady || $indexNowReady) && $post->isPublished())
-                    <button type="submit" form="form-index-request" class="btn bg-blue-600 text-white hover:bg-blue-700 !px-3 !py-1.5 text-xs"><x-admin.icon name="send" class="h-4 w-4" /> Request indexing</button>
-                @endif
-                @if(! $googleReady && $user->isAdmin())
-                    <a href="{{ route('admin.settings.edit', ['tab' => 'google']) }}" class="btn-outline !px-3 !py-1.5 text-xs">Connect Google to inspect &amp; index</a>
-                @endif
-            </div>
-            <p class="mt-3 text-xs text-ink-500">Submitting tells Google (Indexing API) and Bing/Yandex (IndexNow) that this URL is new or changed. Inspection returns Google's live index status.</p>
-            @if($indexingLogs->isNotEmpty())
-                <ul class="mt-3 divide-y divide-ink-100 border-t border-ink-100 text-xs">
-                    @foreach($indexingLogs as $log)
-                        <li class="flex items-center gap-2 py-1.5"><span class="{{ $log->status === 'ok' ? 'text-green-600' : 'text-red-600' }}"><x-admin.icon :name="$log->status === 'ok' ? 'check' : 'x'" class="h-3.5 w-3.5" /></span><span class="font-medium">{{ str_replace('_', ' ', $log->provider) }}</span><span class="text-ink-500">{{ $log->action }}</span><span class="ml-auto text-ink-500">{{ $log->created_at->diffForHumans(null, true) }}</span></li>
-                    @endforeach
-                </ul>
-            @endif
-        </section>
-        @endif
-
-        {{-- Category --}}
-        <section class="card p-5">
-            <h2 class="mb-3 text-lg font-bold">Category</h2>
-            <x-admin.select label="Language" name="language" :value="$post->language ?: 'en'" :options="$languages" />
-            <div class="mb-4">
-                <label class="label" for="f-category_id">Category</label>
-                <select id="f-category_id" name="category_id" class="input" data-category-select>
-                    <option value="">Select a category</option>
-                    @foreach($categories as $c)
-                        <option value="{{ $c->id }}" data-slug="{{ $c->slug }}" @selected((string) old('category_id', $post->category_id) === (string) $c->id)>{{ $c->name }}</option>
-                        @foreach($c->children as $ch)
-                            <option value="{{ $ch->id }}" data-slug="{{ $ch->slug }}" @selected((string) old('category_id', $post->category_id) === (string) $ch->id)>— {{ $ch->name }}</option>
-                        @endforeach
-                    @endforeach
-                </select>
-                @error('category_id')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
-            </div>
-        </section>
-
-        {{-- Image --}}
-        <section class="card p-5">
-            <h2 class="text-lg font-bold">Image</h2>
-            <p class="mb-3 text-xs text-ink-500">Main post image</p>
-            <label class="block cursor-pointer rounded-lg border-2 border-dashed border-ink-300 bg-ink-100/40 p-3 text-center hover:border-brand-600">
-                <img id="image-preview" src="{{ $post->imageUrl('medium') ?: '' }}" alt="" class="mx-auto mb-2 w-full rounded aspect-video object-cover {{ $post->image ? '' : 'hidden' }}">
-                <span class="btn-secondary pointer-events-none">Select Image</span>
-                <input type="file" name="image" accept="image/*" data-preview="image-preview" class="sr-only">
-            </label>
-            <p class="mt-1 text-xs text-ink-500">JPG/PNG/WebP up to 5 MB · 1200×675 recommended · WebP sizes generated automatically.</p>
-            <x-admin.field label="or Add Image Url" name="image_url" type="url" :value="\Illuminate\Support\Str::startsWith($post->image, 'http') ? $post->image : ''" class="mt-3" />
-            <x-admin.field label="Image Description (alt text)" name="image_alt" :value="$post->image_alt" :max="200" help="Describe the image for accessibility and Google Images." />
-            <x-admin.field label="Caption" name="image_caption" :value="$post->image_caption" :max="300" />
-            @if($post->image)<x-admin.checkbox label="Remove current image" name="remove_image" />@endif
-        </section>
-
-        {{-- Additional images --}}
-        <section class="card p-5">
-            <h2 class="text-lg font-bold">Additional Images</h2>
-            <p class="mb-3 text-xs text-ink-500">Photo gallery shown under the article</p>
-            @if($post->exists && $post->images->isNotEmpty())
-                <ul class="mb-3 grid grid-cols-3 gap-2">
-                    @foreach($post->images as $image)
-                        <li class="relative">
-                            <img src="{{ $image->url('small') }}" alt="" class="aspect-square w-full rounded object-cover">
-                            <input type="text" name="image_captions[{{ $image->id }}]" value="{{ $image->caption }}" placeholder="Caption" class="input mt-1 !px-1.5 !py-0.5 !text-xs">
-                            <button type="submit" formaction="{{ route('admin.posts.images.destroy', $image) }}" formmethod="post" name="_method" value="DELETE" formnovalidate class="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white" title="Remove"><x-admin.icon name="x" class="h-3 w-3" /></button>
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-            <label class="btn bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"><x-admin.icon name="image" class="h-4 w-4" /> Select Images<input type="file" name="gallery[]" accept="image/*" multiple class="sr-only" data-file-list="gallery-list"></label>
-            <ul id="gallery-list" class="mt-2 space-y-0.5 text-xs text-ink-500"></ul>
-            @error('gallery.*')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
-        </section>
-
-        {{-- Files --}}
-        <section class="card p-5">
-            <h2 class="text-lg font-bold">Files</h2>
-            <p class="mb-3 text-xs text-ink-500">Downloadable additional files (.pdf, .docx, .zip etc.)</p>
-            @if($post->exists && $post->files->isNotEmpty())
-                <ul class="mb-3 divide-y divide-ink-100 text-sm">
-                    @foreach($post->files as $file)
-                        <li class="flex items-center justify-between gap-2 py-1.5">
-                            <a href="{{ $file->url() }}" target="_blank" class="truncate hover:text-brand-600">{{ $file->name }}</a>
-                            <span class="shrink-0 text-xs text-ink-500">{{ $file->humanSize() }} · {{ $file->downloads }} downloads</span>
-                            <button type="submit" formaction="{{ route('admin.posts.files.destroy', $file) }}" formmethod="post" name="_method" value="DELETE" formnovalidate class="text-red-600" title="Remove"><x-admin.icon name="x" class="h-4 w-4" /></button>
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-            <label class="btn bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"><x-admin.icon name="file" class="h-4 w-4" /> Select Files<input type="file" name="files[]" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.txt,.csv" multiple class="sr-only" data-file-list="files-list"></label>
-            <ul id="files-list" class="mt-2 space-y-0.5 text-xs text-ink-500"></ul>
-            @error('files.*')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
-        </section>
-    </div>
-</form>
-
-@if($post->exists)
-    {{-- Separate forms (cannot nest inside the main form) --}}
-    <div class="mt-4 flex flex-wrap gap-2 xl:ml-auto xl:w-1/3 xl:pl-6">
-        @if($googleReady)
-            <form method="post" action="{{ route('admin.posts.inspect', $post) }}">@csrf<button class="btn-outline"><x-admin.icon name="search" class="h-4 w-4" /> Inspect URL in Google</button></form>
-        @endif
-        @if(($googleReady || $indexNowReady) && $post->isPublished())
-            <form method="post" action="{{ route('admin.posts.index-request', $post) }}">@csrf<button class="btn bg-blue-600 text-white hover:bg-blue-700"><x-admin.icon name="send" class="h-4 w-4" /> Request indexing now</button></form>
-        @endif
-        @if(! $googleReady && $user->isAdmin())
-            <a href="{{ route('admin.settings.edit', ['tab' => 'google']) }}" class="btn-outline">Connect Google to inspect &amp; index</a>
-        @endif
-    </div>
-    @if($indexingLogs->isNotEmpty())
-        <div class="card mt-4 overflow-x-auto xl:ml-auto xl:w-1/3">
-            <h3 class="border-b border-ink-100 px-4 py-2 text-sm font-bold">Indexing history</h3>
-            <table class="table-admin text-xs"><tbody>
-                @foreach($indexingLogs as $log)
-                    <tr><td class="{{ $log->status === 'ok' ? 'text-green-700' : 'text-red-700' }}">{{ $log->status }}</td><td>{{ str_replace('_', ' ', $log->provider) }}</td><td>{{ $log->action }}</td><td class="whitespace-nowrap text-ink-500">{{ $log->created_at->diffForHumans() }}</td></tr>
-                @endforeach
-            </tbody></table>
-        </div>
-    @endif
 @endif
 @endsection

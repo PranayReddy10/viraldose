@@ -10,7 +10,7 @@
         <x-admin.field label="Website" name="website" type="url" :value="$user->website" />
         <x-admin.field label="X / Twitter" name="twitter" :value="$user->twitter" />
     </div>
-    <div class="mb-4"><label class="label">Avatar</label>@if($user->avatarUrl())<img src="{{ $user->avatarUrl() }}" alt="" class="mb-2 h-16 w-16 rounded-full object-cover">@endif<input type="file" name="avatar" accept="image/*" class="block w-full text-sm"></div>
+    <x-admin.file label="Avatar" name="avatar" accept="image/*" button="Choose photo" :preview="$user->avatarUrl()" preview-class="!h-24 !w-24 !mx-auto rounded-full aspect-square" help="Square image, up to 2 MB" />
     <h2 class="mb-3 mt-6 font-bold">Change password</h2>
     <x-admin.field label="Current password" name="current_password" type="password" />
     <div class="grid gap-4 sm:grid-cols-2">

@@ -15,7 +15,7 @@
             @csrf
             <h2 class="mb-1 font-bold">Import CSV</h2>
             <p class="mb-3 text-xs text-ink-500">Columns: from, to, status (optional). One rule per line.</p>
-            <input type="file" name="file" accept=".csv,.txt" required class="mb-3 block w-full text-sm">
+            <x-admin.file name="file" accept=".csv,.txt" :required="true" button="Choose CSV" icon="file" class="!mb-3" />
             <button class="btn-secondary">Import</button>
         </form>
     </div>

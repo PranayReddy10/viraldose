@@ -17,10 +17,8 @@
             @endforeach
         </div>
         <div data-source="upload" class="hidden">
-            <label class="label">Video file (MP4 / MOV / WebM, up to 100 MB, vertical 9:16 recommended)</label>
-            @if($reel->source_type === 'upload' && $reel->video_path)<p class="mb-1 text-xs text-ink-500">Current: <a href="{{ $reel->videoUrl() }}" target="_blank" class="underline">{{ basename($reel->video_path) }}</a></p>@endif
-            <input type="file" name="video" accept="video/mp4,video/quicktime,video/webm" class="mb-4 block w-full text-sm">
-            @error('video')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+            @if($reel->source_type === 'upload' && $reel->video_path)<p class="mb-1 text-xs text-ink-500">Current video: <a href="{{ $reel->videoUrl() }}" target="_blank" class="underline">{{ basename($reel->video_path) }}</a></p>@endif
+            <x-admin.file label="Video file" name="video" accept="video/mp4,video/quicktime,video/webm" button="Choose video" icon="reels" help="MP4 / MOV / WebM up to 100 MB · vertical 9:16 recommended" />
         </div>
         <div data-source="url" class="hidden">
             <x-admin.field label="Direct video URL" name="video_url" type="url" :value="$reel->source_type === 'url' ? $reel->video_path : ''" help="A public https://… .mp4 link (e.g. from DigitalOcean Spaces)." />
@@ -35,8 +33,7 @@
     <div class="space-y-6">
         <div class="card p-5">
             <h2 class="mb-3 font-bold">Thumbnail</h2>
-            @if($reel->thumbnailUrl())<img src="{{ $reel->thumbnailUrl() }}" alt="" class="mb-2 w-32 rounded aspect-[9/16] object-cover">@endif
-            <input type="file" name="thumbnail" accept="image/*" class="mb-2 block w-full text-sm">
+            <x-admin.file name="thumbnail" accept="image/*" button="Choose thumbnail" :preview="$reel->thumbnailUrl()" preview-class="!w-28 !mx-auto aspect-[9/16]" help="Vertical 1080×1920 works best" />
             <x-admin.field label="…or thumbnail URL" name="thumbnail_url" type="url" :value="\Illuminate\Support\Str::startsWith($reel->thumbnail, 'http') ? $reel->thumbnail : ''" />
         </div>
         <div class="card p-5">

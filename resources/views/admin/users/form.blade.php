@@ -18,7 +18,7 @@
     </div>
     <div class="card p-5 space-y-4">
         <x-admin.select label="Role" name="role" :value="$user->role" :options="['admin' => 'Admin – full access', 'editor' => 'Editor – content & moderation', 'author' => 'Author – own posts only']" />
-        <div><label class="label">Avatar</label>@if($user->avatarUrl())<img src="{{ $user->avatarUrl() }}" alt="" class="mb-2 h-16 w-16 rounded-full object-cover">@endif<input type="file" name="avatar" accept="image/*" class="block w-full text-sm"></div>
+        <x-admin.file label="Avatar" name="avatar" accept="image/*" button="Choose photo" :preview="$user->avatarUrl()" preview-class="!h-24 !w-24 !mx-auto rounded-full aspect-square" help="Square image, up to 2 MB" />
         <x-admin.checkbox label="Active" name="is_active" :checked="$user->is_active" />
         <button class="btn-primary w-full" type="submit">Save</button>
     </div>

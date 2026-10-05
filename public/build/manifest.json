@@ -1,6 +1,6 @@
 {
   "resources/css/admin.css": {
-    "file": "assets/admin-ZPn2FdQK.css",
+    "file": "assets/admin-C_j2RqdV.css",
     "name": "admin",
     "names": [
       "admin.css"
@@ -9,7 +9,7 @@
     "isEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app-BHB5eoKj.css",
+    "file": "assets/app-CMKCXrzT.css",
     "name": "app",
     "names": [
       "app.css"
@@ -18,7 +18,7 @@
     "isEntry": true
   },
   "resources/js/admin.js": {
-    "file": "assets/admin-BngB5ZBN.js",
+    "file": "assets/admin-BGkEQzVw.js",
     "name": "admin",
     "src": "resources/js/admin.js",
     "isEntry": true

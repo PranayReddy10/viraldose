@@ -6,9 +6,9 @@
         <section class="card p-5">
             <h2 class="font-bold">1. Upload the Varient export</h2>
             <p class="mt-1 text-sm text-ink-700">In the <em>old</em> site's phpMyAdmin select the <code>posts</code> table → Export → SQL (also <code>categories</code>, <code>images</code>, <code>users</code> if you can – you may upload several files). Max 200 MB per file.</p>
-            <form method="post" action="{{ route('admin.import.upload') }}" enctype="multipart/form-data" class="mt-3 flex flex-wrap items-center gap-2">
+            <form method="post" action="{{ route('admin.import.upload') }}" enctype="multipart/form-data" class="mt-3">
                 @csrf
-                <input type="file" name="file" accept=".sql,.txt" required class="text-sm">
+                <x-admin.file name="file" accept=".sql,.txt" :required="true" button="Choose .sql file" icon="file" help="phpMyAdmin export of the posts table (up to 200 MB)" class="!mb-2" />
                 <button class="btn-primary">Upload</button>
             </form>
             @if($uploaded->isNotEmpty())

@@ -290,6 +290,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Designed file fields: show chosen names and an image preview
+    document.querySelectorAll('[data-file-field]').forEach((field) => {
+        const input = field.querySelector('input[type=file]');
+        const name = field.querySelector('[data-file-name]');
+        const count = field.querySelector('[data-file-count]');
+        const preview = field.querySelector('[data-file-preview]');
+        if (!input) return;
+        if (preview) preview.addEventListener('error', () => preview.classList.add('hidden'));
+        input.addEventListener('change', () => {
+            const files = [...input.files];
+            if (!files.length) return;
+            const kb = (f) => (f.size >= 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.round(f.size / 1024) + ' KB');
+            name.textContent = files.length === 1 ? `${files[0].name} (${kb(files[0])})` : files.map((f) => f.name).join(', ');
+            name.classList.add('text-ink-900', 'font-medium');
+            if (count) { count.textContent = files.length > 1 ? files.length + ' files' : 'ready'; count.classList.remove('hidden'); }
+            if (preview && files[0].type.startsWith('image/')) { preview.src = URL.createObjectURL(files[0]); preview.classList.remove('hidden'); }
+        });
+    });
+
     // Image preview
     document.querySelectorAll('input[type=file][data-preview]').forEach((input) => {
         input.addEventListener('change', () => {

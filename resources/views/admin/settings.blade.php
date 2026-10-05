@@ -37,8 +37,7 @@
             <div class="mb-5">
                 <label class="label">{{ $label }}</label>
                 @if(!empty($settings[$key]))<div class="mb-2 flex items-center gap-3"><img src="{{ media_url($settings[$key]) }}" alt="" class="max-h-12 rounded border bg-ink-100 p-1"><label class="text-xs"><input type="checkbox" name="remove_{{ $key }}" value="1"> remove</label></div>@endif
-                <input type="file" name="{{ $key }}" class="block w-full text-sm">
-                @error($key)<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+                <x-admin.file :name="$key" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,image/vnd.microsoft.icon" button="Choose image" class="!mb-0" />
             </div>
         @endforeach
     </div>
@@ -80,9 +79,7 @@
             @else
                 <p class="mt-3 rounded bg-yellow-50 px-3 py-2 text-sm text-yellow-800">Not connected.</p>
             @endif
-            <label class="label mt-4">Upload service-account JSON key</label>
-            <input type="file" name="google_service_account" accept=".json,application/json" class="block w-full text-sm">
-            @error('google_service_account')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+            <x-admin.file name="google_service_account" label="Upload service-account JSON key" accept=".json,application/json" button="Choose JSON key" icon="file" class="mt-4" />
             <p class="mt-4 text-xs"><a href="https://github.com/PranayReddy10/viraldose/blob/main/docs/google-setup.md" target="_blank" rel="noopener" class="font-semibold text-brand-600 underline">Detailed step-by-step guide (docs/google-setup.md) →</a></p>
             <ol class="mt-2 list-decimal space-y-1 pl-5 text-xs text-ink-700">
                 <li>Google Cloud Console → create a project → enable <em>Search Console API</em>, <em>Web Search Indexing API</em> and <em>Google Analytics Data API</em>.</li>

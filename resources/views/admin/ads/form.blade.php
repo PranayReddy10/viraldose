@@ -10,7 +10,7 @@
         <x-admin.select label="Pages" name="pages" :value="$ad->pages ?: 'all'" :options="\App\Models\Ad::PAGES" />
     </div>
     <x-admin.field label="Ad code (AdSense / HTML)" name="code" type="textarea" :rows="6" :value="$ad->code" help="Paste the full ad unit code. Takes priority over the image." />
-    <div class="mb-4"><label class="label">…or banner image</label>@if($ad->image)<img src="{{ media_url($ad->image) }}" alt="" class="mb-2 max-h-32">@endif<input type="file" name="image" accept="image/*" class="block w-full text-sm"></div>
+    <x-admin.file label="…or banner image" name="image" accept="image/*" button="Choose banner" :preview="$ad->image ? media_url($ad->image) : null" preview-class="!aspect-auto" help="PNG/JPG/GIF/WebP up to 2 MB, e.g. 728×90 or 300×250" />
     <x-admin.field label="Banner link URL" name="url" type="url" :value="$ad->url" />
     <x-admin.field label="Sort order" name="sort_order" type="number" :value="$ad->sort_order ?? 0" />
     <x-admin.checkbox label="Active" name="is_active" :checked="$ad->is_active" />

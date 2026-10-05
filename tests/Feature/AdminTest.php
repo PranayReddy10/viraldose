@@ -10,6 +10,7 @@ use App\Models\Page;
 use App\Models\Post;
 use App\Models\Redirect;
 use App\Models\Subscriber;
+use App\Models\Tag;
 use App\Models\User;
 use Database\Seeders\DemoContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -198,5 +199,44 @@ class AdminTest extends TestCase
         $csv = UploadedFile::fake()->createWithContent('r.csv', "from,to\n/a,/b\n/c,/d,302\n");
         $this->actingAs($admin)->post('/admin/redirects/import', ['file' => $csv])->assertRedirect();
         $this->assertDatabaseHas('redirects', ['from_path' => '/c', 'status_code' => 302]);
+    }
+
+    public function test_admin_pages_have_no_nested_forms_and_update_does_not_trash(): void
+    {
+        $admin = $this->admin()->fresh();
+        $post = $this->publishedPost();
+        $tag = Tag::factory()->create();
+        $post->tags()->attach($tag);
+
+        $urls = [
+            route('admin.posts.edit', $post), '/admin/posts/create', '/admin/tags', '/admin/settings?tab=branding',
+            '/admin/settings?tab=google', '/admin/import', '/admin/reels/create', route('admin.users.edit', $admin),
+            '/admin/profile', '/admin/ads/create', '/admin/redirects', '/admin/categories',
+        ];
+
+        foreach ($urls as $url) {
+            $html = $this->actingAs($admin)->get($url)->assertOk()->getContent();
+            $depth = 0;
+            preg_match_all('/<form\b|<\/form>/i', $html, $m, PREG_OFFSET_CAPTURE);
+            foreach ($m[0] as [$token, $offset]) {
+                $depth += $token[0] === '<' && $token[1] !== '/' ? 1 : -1;
+                $this->assertLessThanOrEqual(1, $depth, "Nested <form> at offset {$offset} in {$url}");
+                $this->assertGreaterThanOrEqual(0, $depth, "Stray </form> at offset {$offset} in {$url}");
+            }
+            $this->assertSame(0, $depth, "Unbalanced <form> tags in {$url}");
+        }
+
+        // The post form itself must not carry a DELETE method override.
+        $html = $this->actingAs($admin)->get(route('admin.posts.edit', $post))->getContent();
+        preg_match('/<form[^>]*id="post-form".*?<\/form>/s', $html, $m);
+        $this->assertNotEmpty($m, 'post-form missing');
+        $this->assertStringNotContainsString('DELETE', $m[0]);
+
+        $this->actingAs($admin)->put(route('admin.posts.update', $post), [
+            'title' => $post->title, 'slug' => $post->slug, 'category_id' => $post->category_id,
+            'content' => '<p>Updated body</p>', 'status' => 'published',
+        ])->assertRedirect();
+        $this->assertNull($post->fresh()->deleted_at);
+        $this->assertDatabaseHas('posts', ['id' => $post->id, 'deleted_at' => null]);
     }
 }
