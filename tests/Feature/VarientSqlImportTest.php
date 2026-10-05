@@ -188,4 +188,57 @@ class VarientSqlImportTest extends TestCase
         $this->assertStringNotContainsString('<div>', Post::where('legacy_id', 1)->value('content'));
         @unlink($fixture);
     }
+
+    public function test_remote_fetcher_accepts_webp_and_falls_back_from_avif(): void
+    {
+        Storage::fake('public');
+        $img = imagecreatetruecolor(800, 500);
+        ob_start();
+        imagewebp($img, null, 80);
+        $webp = ob_get_clean();
+        ob_start();
+        imagejpeg($img, null, 85);
+        $jpeg = ob_get_clean();
+        $avif = "\x00\x00\x00\x1cftypavif\x00\x00\x00\x00avifmif1miaf".str_repeat("\x00", 3000);
+        Http::fake([
+            'cdn.webp.example/*' => Http::response($webp, 200, ['Content-Type' => 'image/webp']),
+            'cdn.avif.example/*' => Http::sequence()->push($avif, 200, ['Content-Type' => 'image/avif'])->push($jpeg, 200, ['Content-Type' => 'image/jpeg']),
+            'cdn.svg.example/*' => Http::response('<svg xmlns="http://www.w3.org/2000/svg"><script>x()</script></svg>'.str_repeat(' ', 3000), 200, ['Content-Type' => 'image/svg+xml']),
+        ]);
+        $category = Category::factory()->create();
+        $w = Post::factory()->create(['category_id' => $category->id, 'image' => 'https://cdn.webp.example/photo.webp']);
+        $a = Post::factory()->create(['category_id' => $category->id, 'image' => 'https://cdn.avif.example/photo']);
+        $s = Post::factory()->create(['category_id' => $category->id, 'image' => 'https://cdn.svg.example/logo.svg']);
+
+        $this->artisan('images:fetch-remote', ['--limit' => 10])->assertSuccessful();
+
+        $this->assertStringEndsWith('.webp', $w->fresh()->image);
+        Storage::disk('public')->assertExists($w->fresh()->image);
+        $info = pathinfo($w->fresh()->image);
+        Storage::disk('public')->assertExists($info['dirname'].'/'.$info['filename'].'-medium.webp');
+
+        $this->assertStringEndsWith('.jpg', $a->fresh()->image);
+        Http::assertSentCount(4);
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'cdn.avif.example') && $r->header('Accept')[0] === 'image/jpeg,image/png;q=0.9');
+
+        $this->assertStringStartsWith('https://', $s->fresh()->image);
+        $this->assertStringContainsString('not an image', $s->fresh()->image_fetch_error);
+    }
+
+    public function test_webp_featured_image_upload_is_accepted(): void
+    {
+        Storage::fake('public');
+        $category = Category::factory()->create(['slug' => 'news']);
+        $img = imagecreatetruecolor(1000, 600);
+        $tmp = tempnam(sys_get_temp_dir(), 'vd').'.webp';
+        imagewebp($img, $tmp, 80);
+
+        $this->actingAs($this->admin())->post('/admin/posts', ['title' => 'WebP story', 'category_id' => $category->id, 'status' => 'published',
+            'image' => new UploadedFile($tmp, 'photo.webp', 'image/webp', null, true)])->assertRedirect();
+        $post = Post::first();
+        $this->assertStringEndsWith('.webp', $post->image);
+        $info = pathinfo($post->image);
+        Storage::disk('public')->assertExists($info['dirname'].'/'.$info['filename'].'-large.webp');
+        @unlink($tmp);
+    }
 }

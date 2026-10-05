@@ -15,7 +15,7 @@ class MediaController extends Controller
      */
     public function upload(Request $request)
     {
-        $request->validate(['file' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120']]);
+        $request->validate(['file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif,avif', 'max:5120']]);
         $path = $this->images->store($request->file('file'), 'uploads/content');
 
         return response()->json([

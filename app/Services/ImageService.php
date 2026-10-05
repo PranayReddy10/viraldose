@@ -69,7 +69,7 @@ class ImageService
 
         $reference = $diskName === self::SPACES_DISK ? 'spaces://'.$relative : $relative;
 
-        if ($variants && in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+        if ($variants && in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'], true)) {
             $this->generateVariants($reference);
         }
 
@@ -86,9 +86,13 @@ class ImageService
         if (! $disk->exists($path)) {
             return;
         }
-        $src = @imagecreatefromstring((string) $disk->get($path));
+        $raw = (string) $disk->get($path);
+        $src = @imagecreatefromstring($raw);
+        if (! $src && function_exists('imagecreatefromwebp') && str_starts_with($raw, 'RIFF')) {
+            $src = @imagecreatefromwebp('data://application/octet-stream;base64,'.base64_encode($raw));
+        }
         if (! $src) {
-            return;
+            return; // unsupported by this server's GD: the original file is served as is
         }
         $width = imagesx($src);
         $height = imagesy($src);
