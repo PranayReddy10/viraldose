@@ -38,6 +38,7 @@ class ReelController extends Controller
                     $reel->video_path = $reel->source_type === 'url' ? $post->video_url : null;
                 }
                 if ($post->image && ! $post->video_url) {
+                    $reel->source_type = 'image';
                     $reel->thumbnail = $post->image;
                 }
             }
@@ -57,7 +58,7 @@ class ReelController extends Controller
 
     public function edit(Reel $reel)
     {
-        return view('admin.reels.form', $this->formData($reel));
+        return view('admin.reels.form', $this->formData($reel) + ['shares' => $reel->socialShares()->latest()->limit(5)->get()]);
     }
 
     public function update(Request $request, Reel $reel)
@@ -97,6 +98,8 @@ class ReelController extends Controller
             'source_type' => ['required', Rule::in(array_keys(Reel::SOURCES))],
             'video' => ['nullable', 'file', 'mimetypes:video/mp4,video/quicktime,video/webm', 'max:102400', 'required_if:source_type,upload'],
             'video_url' => ['nullable', 'url', 'max:500', 'required_if:source_type,url'],
+            'image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif,avif', 'max:8192'],
+            'image_url' => ['nullable', 'url', 'max:500'],
             'external_url' => ['nullable', 'url', 'max:500', 'required_if:source_type,youtube,instagram'],
             'thumbnail' => ['nullable', 'image', 'max:4096'],
             'thumbnail_url' => ['nullable', 'url', 'max:500'],
@@ -108,7 +111,10 @@ class ReelController extends Controller
         ]);
 
         if ($data['source_type'] === 'upload' && ! $request->hasFile('video') && ! $reel->video_path) {
-            abort(422, 'Upload a video file.');
+            throw ValidationException::withMessages(['video' => 'Upload a video file.']);
+        }
+        if ($data['source_type'] === 'image' && ! $request->hasFile('image') && empty($data['image_url']) && ! $reel->thumbnail) {
+            throw ValidationException::withMessages(['image' => 'Upload a photo or give its URL.']);
         }
         if ($data['source_type'] === 'youtube' && ! EmbedRenderer::youtubeId($data['external_url'] ?? '')) {
             throw ValidationException::withMessages(['external_url' => 'That is not a YouTube video / Shorts URL.']);
@@ -127,7 +133,13 @@ class ReelController extends Controller
         if ($data['source_type'] !== 'upload' && $data['source_type'] !== 'url' && $reel->source_type !== $data['source_type']) {
             $reel->video_path = null;
         }
-        if ($request->hasFile('thumbnail')) {
+        if ($data['source_type'] === 'image' && $request->hasFile('image')) {
+            $oldThumb = $reel->thumbnail;
+            $reel->thumbnail = $this->images->store($request->file('image'), 'uploads/reels');
+            $this->images->delete($oldThumb);
+        } elseif ($data['source_type'] === 'image' && ! empty($data['image_url'])) {
+            $reel->thumbnail = $data['image_url'];
+        } elseif ($request->hasFile('thumbnail')) {
             $oldThumb = $reel->thumbnail;
             $reel->thumbnail = $this->images->store($request->file('thumbnail'), 'uploads/reels');
             $this->images->delete($oldThumb);

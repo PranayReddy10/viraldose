@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Post;
+use App\Models\Reel;
 use App\Models\SocialShare;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
@@ -54,17 +55,17 @@ class InstagramPublisher
         return ['username' => $r->json('username'), 'followers' => $r->json('followers_count'), 'picture' => $r->json('profile_picture_url')];
     }
 
-    public function caption(Post $post, ?string $override = null): string
+    public function caption(Post|Reel $subject, ?string $override = null): string
     {
         if ($override !== null && trim($override) !== '') {
             return Str::limit(trim($override), 2200, '');
         }
         $template = (string) setting('instagram_caption_template');
         $caption = strtr($template, [
-            '{title}' => $post->title,
-            '{excerpt}' => (string) $post->excerpt,
-            '{category}' => (string) $post->category?->name,
-            '{url}' => $post->url(),
+            '{title}' => $subject->title,
+            '{excerpt}' => (string) ($subject instanceof Post ? $subject->excerpt : $subject->caption),
+            '{category}' => (string) $subject->category?->name,
+            '{url}' => $subject->url(),
             '{hashtags}' => (string) setting('instagram_hashtags'),
             '\n' => "\n",
         ]);
@@ -84,6 +85,58 @@ class InstagramPublisher
         }
         $caption = $this->caption($post, $caption);
         $share = SocialShare::create(['post_id' => $post->id, 'network' => 'instagram', 'media_type' => 'image', 'status' => 'processing', 'image' => $cardFile ?: $imageUrl, 'caption' => $caption]);
+
+        return $this->publishImage($share, $imageUrl, $caption);
+    }
+
+    /**
+     * Photo reel → Instagram feed photo. Instagram only accepts JPEG within 4:5…1.91:1,
+     * so the stored image is re-rendered as a 1080×1350 JPEG first.
+     */
+    public function shareReelPhoto(Reel $reel, ?string $caption = null): SocialShare
+    {
+        $caption = $this->caption($reel, $caption);
+        $share = SocialShare::create(['post_id' => $reel->post_id, 'reel_id' => $reel->id, 'network' => 'instagram', 'media_type' => 'image', 'status' => 'processing', 'caption' => $caption]);
+        try {
+            $card = $this->cards->photoCard((string) $reel->thumbnail, 'reel-'.$reel->id);
+        } catch (\Throwable $e) {
+            $share->update(['status' => 'failed', 'response' => Str::limit($e->getMessage(), 2000)]);
+
+            return $share;
+        }
+        $share->update(['image' => $card]);
+
+        return $this->publishImage($share, ShareCardGenerator::url($card), $caption);
+    }
+
+    /**
+     * Video reel (uploaded file or direct .mp4 URL) → Instagram Reel.
+     */
+    public function shareReelVideo(Reel $reel, ?string $caption = null): SocialShare
+    {
+        $caption = $this->caption($reel, $caption);
+        $cover = null;
+        if ($reel->thumbnail) {
+            try {
+                $cover = ShareCardGenerator::url($this->cards->photoCard($reel->thumbnail, 'reel-'.$reel->id.'-cover'));
+            } catch (\Throwable) {
+            }
+        }
+        $share = SocialShare::create(['post_id' => $reel->post_id, 'reel_id' => $reel->id, 'network' => 'instagram', 'media_type' => 'reel', 'status' => 'processing', 'image' => $cover, 'caption' => $caption]);
+        try {
+            $creationId = $this->createContainer(array_filter([
+                'media_type' => 'REELS', 'video_url' => $reel->videoUrl(), 'caption' => $caption, 'cover_url' => $cover, 'share_to_feed' => 'true',
+            ]));
+            $share->update(['creation_id' => $creationId, 'response' => 'Uploading to Instagram… status is checked every minute.']);
+        } catch (\Throwable $e) {
+            $share->update(['status' => 'failed', 'response' => Str::limit($e->getMessage(), 2000)]);
+        }
+
+        return $share;
+    }
+
+    private function publishImage(SocialShare $share, string $imageUrl, string $caption): SocialShare
+    {
 
         try {
             $creationId = $this->createContainer(['image_url' => $imageUrl, 'caption' => $caption]);

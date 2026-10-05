@@ -102,3 +102,8 @@
 #editor-toolbar .ql-social button svg { @apply h-full w-full; }
 #editor-toolbar .ql-social { @apply border-l border-ink-300 pl-2; }
 .ql-editor img { max-width: 100%; }
+
+/* Photo reels: slow Ken Burns zoom while the slide is on screen */
+@keyframes reel-photo-zoom { from { transform: scale(1); } to { transform: scale(1.08); } }
+.reel-photo { animation: reel-photo-zoom 12s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .reel-photo { animation: none; } }

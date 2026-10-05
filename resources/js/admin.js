@@ -213,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const syncSource = () => {
             const v = document.querySelector('[data-source-radio]:checked')?.value;
             document.querySelectorAll('[data-source]').forEach((el) => el.classList.toggle('hidden', el.dataset.source !== v));
+            document.querySelectorAll('[data-source-hide]').forEach((el) => el.classList.toggle('hidden', el.dataset.sourceHide === v));
         };
         radios.forEach((r) => r.addEventListener('change', syncSource));
         syncSource();

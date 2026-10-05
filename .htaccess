@@ -11,7 +11,10 @@
 
     # Never serve application internals or secrets
     RewriteRule ^(\.env.*|\.git.*|\.htaccess|composer\.(json|lock)|package(-lock)?\.json|artisan|phpunit\.xml|vite\.config\.js|CLAUDE\.md|README\.md|\.editorconfig|\.gitattributes|\.gitignore|\.npmrc)$ - [F,L]
-    RewriteRule ^(app|bootstrap|config|database|deploy|node_modules|resources|routes|storage|tests|vendor)(/.*)?$ - [F,L]
+    # (/storage/... is NOT blocked: it maps to public/storage, the symlink to
+    #  storage/app/public, or to Laravel's fallback route when the link is missing)
+    RewriteRule ^(app|bootstrap|config|database|deploy|node_modules|resources|routes|tests|vendor)(/.*)?$ - [F,L]
+    RewriteRule ^storage/(app/private|framework|logs)(/.*)?$ - [F,L]
 
     # /public/... requested directly -> canonical URL without /public (avoids duplicate URLs)
     RewriteCond %{THE_REQUEST} \s/+public/ [NC]

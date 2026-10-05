@@ -102,6 +102,105 @@ class ReelsSocialAdsTest extends TestCase
             ->assertSee('value="https://youtu.be/dQw4w9WgXcQ"', false)->assertSee($post->title);
     }
 
+    public function test_photo_reel_is_shown_full_screen_and_listed_in_sitemap(): void
+    {
+        Storage::fake('public');
+        $admin = $this->admin();
+        $this->actingAs($admin)->post('/admin/reels', ['title' => 'Photo one', 'source_type' => 'image', 'is_active' => 1])->assertSessionHasErrors('image');
+        $this->actingAs($admin)->post('/admin/reels', ['title' => 'Photo one', 'caption' => 'A photo', 'source_type' => 'image', 'image' => UploadedFile::fake()->image('p.png', 1080, 1920), 'is_active' => 1])->assertRedirect('/admin/reels');
+
+        $reel = Reel::where('title', 'Photo one')->first();
+        $this->assertTrue($reel->isImage());
+        Storage::disk('public')->assertExists($reel->thumbnail);
+        $this->assertStringEndsWith('-large.webp', $reel->imageUrl());
+        $this->assertNull($reel->videoUrl());
+
+        $this->get('/reels')->assertOk()->assertSee('class="reel-photo', false)->assertSee($reel->imageUrl(), false)->assertDontSee('<video', false);
+        $this->get($reel->url())->assertOk()->assertSee('"@type":"ImageObject"', false)->assertDontSee('VideoObject');
+        $this->get('/sitemap-reels.xml')->assertOk()->assertSee('<image:loc>'.$reel->imageUrl().'</image:loc>', false)->assertDontSee('<video:video>', false);
+        $this->get('/')->assertOk()->assertSee($reel->title);
+
+        $this->actingAs($admin)->get(route('admin.reels.edit', $reel))->assertOk()->assertSee('Posts the photo to the feed')->assertSee('Connect Instagram');
+        $this->actingAs($admin)->get('/admin/reels/create')->assertOk()->assertSee('Upload a photo (image reel)');
+    }
+
+    public function test_photo_reel_posts_to_instagram_as_jpeg_card(): void
+    {
+        Storage::fake('public');
+        $this->connectInstagram();
+        Http::fake([
+            'graph.facebook.com/*/media' => Http::response(['id' => 'PC1']),
+            'graph.facebook.com/*/PC1?*' => Http::response(['status_code' => 'FINISHED']),
+            'graph.facebook.com/*/media_publish' => Http::response(['id' => 'PM1']),
+            'graph.facebook.com/*/PM1?*' => Http::response(['permalink' => 'https://www.instagram.com/p/photo/']),
+        ]);
+        $admin = $this->admin();
+        $this->actingAs($admin)->post('/admin/reels', ['title' => 'Photo two', 'source_type' => 'image', 'image' => UploadedFile::fake()->image('p.webp', 900, 1600), 'is_active' => 1])->assertRedirect();
+        $reel = Reel::where('title', 'Photo two')->first();
+
+        $this->actingAs($admin)->post(route('admin.reels.share.instagram', $reel), ['caption' => 'Photo caption'])->assertRedirect()->assertSessionHas('status');
+        $share = SocialShare::first();
+        $this->assertSame($reel->id, $share->reel_id);
+        $this->assertNull($share->post_id);
+        $this->assertSame('published', $share->status);
+        $this->assertSame('https://www.instagram.com/p/photo/', $share->permalink);
+        $this->assertStringStartsWith('uploads/social/reel-'.$reel->id, $share->image);
+        [$w, $h, $type] = getimagesizefromstring(Storage::disk('public')->get($share->image));
+        $this->assertSame([1080, 1350, IMAGETYPE_JPEG], [$w, $h, $type], 'Instagram needs a 4:5 JPEG, not the 9:16 WebP');
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/media') && $r['caption'] === 'Photo caption' && str_ends_with($r['image_url'], '.jpg'));
+
+        $this->actingAs($admin)->get(route('admin.reels.edit', $reel))->assertOk()->assertSee('instagram.com/p/photo');
+    }
+
+    public function test_video_reel_posts_to_instagram_as_reel_and_embeds_cannot(): void
+    {
+        $this->connectInstagram();
+        Http::fake(['graph.facebook.com/*/media' => Http::response(['id' => 'RV1'])]);
+        $admin = $this->admin();
+        $video = Reel::factory()->create(['user_id' => $admin->id, 'source_type' => 'url', 'video_path' => 'https://cdn.example.com/clip.mp4', 'external_url' => null, 'thumbnail' => null]);
+        $this->actingAs($admin)->post(route('admin.reels.share.instagram', $video))->assertRedirect()->assertSessionHas('status');
+        $share = SocialShare::where('reel_id', $video->id)->first();
+        $this->assertSame('processing', $share->status);
+        $this->assertSame('RV1', $share->creation_id);
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/media') && $r['media_type'] === 'REELS' && $r['video_url'] === 'https://cdn.example.com/clip.mp4');
+
+        $yt = Reel::factory()->create(['user_id' => $admin->id]);
+        $this->actingAs($admin)->post(route('admin.reels.share.instagram', $yt))->assertSessionHasErrors('instagram');
+        $this->actingAs($admin)->get(route('admin.reels.edit', $yt))->assertOk()->assertSee('cannot be re-posted');
+    }
+
+    public function test_card_preview_streams_jpeg_and_featured_image_share_uses_jpeg_card(): void
+    {
+        Storage::fake('public');
+        $admin = $this->admin();
+        $post = $this->publishedPost(['image' => null]);
+        $this->actingAs($admin)->get(route('admin.posts.share.card', [$post, 'preview' => 1]))->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+        $this->actingAs($admin)->get(route('admin.posts.share.card', [$post, 'preview' => 1, 'refresh' => 1]))->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+        $this->actingAs($admin)->get(route('admin.posts.edit', $post))->assertOk()->assertSee('Regenerate card');
+
+        $this->connectInstagram();
+        Http::fake([
+            'graph.facebook.com/*/media' => Http::response(['id' => 'FI1']),
+            'graph.facebook.com/*/FI1?*' => Http::response(['status_code' => 'FINISHED']),
+            'graph.facebook.com/*/media_publish' => Http::response(['id' => 'FM1']),
+            'graph.facebook.com/*/FM1?*' => Http::response(['permalink' => 'https://www.instagram.com/p/f/']),
+        ]);
+        Storage::disk('public')->put('uploads/feat.png', UploadedFile::fake()->image('f.png', 1200, 675)->getContent());
+        $post->forceFill(['image' => 'uploads/feat.png'])->save();
+        $this->actingAs($admin)->post(route('admin.posts.share.instagram', $post), ['media' => 'image'])->assertRedirect()->assertSessionHas('status');
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/media') && str_contains($r['image_url'], '/storage/uploads/social/post-'.$post->id.'-photo') && str_ends_with($r['image_url'], '.jpg'));
+    }
+
+    public function test_storage_fallback_route_serves_public_disk_files(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('uploads/demo/pic.txt', 'hello');
+        $response = $this->get('/storage/uploads/demo/pic.txt')->assertOk()->assertHeader('Cache-Control', 'immutable, max-age=31536000, public');
+        $this->assertSame('hello', $response->streamedContent());
+        $this->get('/storage/uploads/missing.jpg')->assertNotFound();
+        $this->get('/storage/../.env')->assertNotFound();
+    }
+
     // ---- Instagram -------------------------------------------------------
 
     public function test_share_card_is_generated_as_portrait_jpeg(): void

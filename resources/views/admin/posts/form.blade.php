@@ -175,9 +175,11 @@
         <section class="card p-5">
             <h2 class="mb-1 flex items-center gap-2 text-lg font-bold"><svg class="h-5 w-5" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" fill="#e1306c"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="#fff" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.3" fill="#fff"/></svg> Instagram</h2>
             <p class="mb-3 text-xs text-ink-500">Post this story to <strong>{{ '@'.ltrim(setting('instagram_username', 'viraldose_news'), '@') }}</strong> as a news card with one click.</p>
-            <a href="{{ route('admin.posts.share.card', [$post, 'preview' => 1]) }}" target="_blank" class="block overflow-hidden rounded-lg border border-ink-100 bg-ink-100" title="Preview the generated card">
-                <img src="{{ route('admin.posts.share.card', [$post, 'preview' => 1, 'v' => $post->updated_at?->timestamp]) }}" alt="Instagram card preview" loading="lazy" class="mx-auto max-h-72 w-auto">
+            <a href="{{ route('admin.posts.share.card', [$post, 'preview' => 1]) }}" target="_blank" class="block overflow-hidden rounded-lg border border-ink-100 bg-ink-100" title="Open the generated card">
+                <img src="{{ route('admin.posts.share.card', [$post, 'preview' => 1, 'v' => $post->updated_at?->timestamp]) }}" alt="Instagram card preview" loading="lazy" class="mx-auto max-h-72 w-auto" onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden')">
+                <span class="hidden px-4 py-8 text-center text-xs text-ink-500">The card preview could not be generated. Check that the PHP GD extension is enabled (and that <code>storage</code> is writable) – see storage/logs/laravel.log.</span>
             </a>
+            <p class="mt-1 text-right text-[11px]"><a href="{{ route('admin.posts.share.card', [$post, 'preview' => 1, 'refresh' => 1]) }}" target="_blank" class="text-ink-500 underline">Regenerate card</a></p>
             <label class="label mt-3" for="ig-caption">Caption</label>
             <textarea id="ig-caption" name="caption" form="form-instagram" rows="5" class="input text-xs">{{ old('caption', $instagram->caption($post)) }}</textarea>
             <div class="mt-3 flex flex-wrap gap-2">

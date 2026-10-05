@@ -2,7 +2,7 @@
 @section('title', 'Reels')
 @section('actions')<a href="{{ route('admin.reels.create') }}" class="btn-primary !px-3 !py-1.5 text-xs"><x-admin.icon name="plus" class="h-4 w-4" /> Add Reel</a> <a href="{{ route('reels.index') }}" target="_blank" class="btn-outline !px-3 !py-1.5 text-xs">Open /reels</a>@endsection
 @section('content')
-<p class="mb-4 text-sm text-ink-700">Reels appear in the vertical, swipe-to-scroll feed at <code>/reels</code> and as a strip on the home page. Sources: uploaded MP4, direct video URL, YouTube Shorts, or an Instagram reel.</p>
+<p class="mb-4 text-sm text-ink-700">Reels appear in the vertical, swipe-to-scroll feed at <code>/reels</code> and as a strip on the home page. Sources: uploaded MP4, a photo (image reel), direct video URL, YouTube Shorts, or an Instagram reel. Photos and uploaded videos can be posted to Instagram from the edit page.</p>
 <form method="get" class="mb-4 flex gap-2"><input type="search" name="q" value="{{ request('q') }}" placeholder="Search reels…" class="input !w-auto min-w-60"><button class="btn-secondary">Search</button></form>
 @if($reels->isEmpty())
     <div class="card p-10 text-center text-ink-500">No reels yet. <a href="{{ route('admin.reels.create') }}" class="text-brand-600 underline">Add the first reel</a>.</div>

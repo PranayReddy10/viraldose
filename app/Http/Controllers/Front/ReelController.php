@@ -46,10 +46,18 @@ class ReelController extends Controller
         $seo->title($current->title)
             ->description($current->caption ?: $current->title.' – watch on '.site_name().' Reels.')
             ->canonical($current->url())
-            ->type('video.other')
-            ->image($current->thumbnailUrl())
+            ->type($current->isImage() ? 'article' : 'video.other')
+            ->image($current->isImage() ? $current->imageUrl() : $current->thumbnailUrl())
             ->breadcrumbs([['name' => 'Home', 'url' => url('/')], ['name' => 'Reels', 'url' => route('reels.index')], ['name' => $current->title, 'url' => $current->url()]])
-            ->addJsonLd(array_filter([
+            ->addJsonLd(array_filter($current->isImage() ? [
+                '@context' => 'https://schema.org',
+                '@type' => 'ImageObject',
+                'name' => $current->title,
+                'caption' => $current->caption ?: $current->title,
+                'contentUrl' => $current->imageUrl(),
+                'datePublished' => $current->published_at?->toIso8601String(),
+                'publisher' => Seo::publisher(),
+            ] : [
                 '@context' => 'https://schema.org',
                 '@type' => 'VideoObject',
                 'name' => $current->title,

@@ -11,6 +11,9 @@
                 <video class="h-full w-full object-contain" playsinline muted loop preload="metadata" @if($reel->thumbnailUrl()) poster="{{ $reel->thumbnailUrl() }}" @endif>
                     <source src="{{ $reel->videoUrl() }}">
                 </video>
+            @elseif($reel->isImage() && $reel->imageUrl())
+                <div class="absolute inset-0 overflow-hidden"><img src="{{ $reel->thumbnailUrl() }}" alt="" aria-hidden="true" class="h-full w-full scale-110 object-cover opacity-50 blur-2xl"></div>
+                <img src="{{ $reel->imageUrl() }}" alt="{{ $reel->title }}" loading="{{ $loop->first && $offset === 0 ? 'eager' : 'lazy' }}" decoding="async" class="reel-photo relative h-full w-full object-contain">
             @elseif($reel->source_type === 'youtube')
                 <iframe data-src="{{ $reel->embedUrl() }}&autoplay=1&mute=1" title="{{ $reel->title }}" class="aspect-[9/16] max-h-full w-full" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
             @elseif($reel->source_type === 'instagram')

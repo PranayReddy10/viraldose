@@ -17,6 +17,7 @@ class Reel extends Model
 
     public const SOURCES = [
         'upload' => 'Upload video file (MP4)',
+        'image' => 'Upload a photo (image reel)',
         'url' => 'Direct video URL (.mp4)',
         'youtube' => 'YouTube Shorts / video URL',
         'instagram' => 'Instagram Reel URL',
@@ -108,9 +109,31 @@ class Reel extends Model
         return $this->thumbnail ? ImageService::url($this->thumbnail, 'medium') : null;
     }
 
+    /** Full-size photo for image reels (the photo is stored in `thumbnail`). */
+    public function imageUrl(): ?string
+    {
+        return $this->thumbnail ? ImageService::url($this->thumbnail, 'large') : null;
+    }
+
     public function isPlayable(): bool
     {
         return in_array($this->source_type, ['upload', 'url'], true);
+    }
+
+    public function isImage(): bool
+    {
+        return $this->source_type === 'image';
+    }
+
+    /** Can this reel be posted to Instagram from here (photo or a direct video file)? */
+    public function canShareToInstagram(): bool
+    {
+        return ($this->isImage() && $this->thumbnail) || ($this->isPlayable() && $this->videoUrl());
+    }
+
+    public function socialShares()
+    {
+        return $this->hasMany(SocialShare::class);
     }
 
     public static function homeStrip(int $limit = 10)

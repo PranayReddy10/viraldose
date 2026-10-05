@@ -23,15 +23,17 @@ class ShareCardGenerator
     {
         $dir = 'uploads/social';
         $file = "{$dir}/post-{$post->id}-".substr(md5($post->title.$post->image.$post->updated_at), 0, 8).'.jpg';
-        $disk = Storage::disk(ImageService::LOCAL_DISK);
-        if (! $force && $disk->exists($file)) {
-            return $file;
+        $diskName = ImageService::uploadDisk();
+        $disk = Storage::disk($diskName);
+        $reference = $diskName === ImageService::SPACES_DISK ? 'spaces://'.$file : $file;
+        if (! $force && $this->exists($disk, $file)) {
+            return $reference;
         }
 
         $w = self::WIDTH;
         $h = self::HEIGHT;
         $canvas = imagecreatetruecolor($w, $h);
-        $bg = $this->loadImage($post);
+        $bg = $this->loadImage($post->image);
         if ($bg) {
             $this->coverCopy($canvas, $bg, $w, $h);
             imagedestroy($bg);
@@ -102,12 +104,56 @@ class ShareCardGenerator
         // Top-right "swipe/read" strip
         imagefilledrectangle($canvas, 0, 0, $w, 10, $badgeColor);
 
-        ob_start();
-        imagejpeg($canvas, null, 88);
-        $disk->put($file, (string) ob_get_clean(), ['visibility' => 'public']);
-        imagedestroy($canvas);
+        $this->write($disk, $file, $canvas);
 
-        return $file;
+        return $reference;
+    }
+
+    /**
+     * Instagram-feed JPEG (4:5, 1080×1350) from any stored image: blurred cover
+     * background with the photo fitted inside. Used for photo reels, whose
+     * originals may be WebP/PNG or 9:16 – both rejected by the Graph API.
+     */
+    public function photoCard(string $image, string $key, bool $force = false): string
+    {
+        $file = 'uploads/social/'.$key.'-'.substr(md5($image), 0, 8).'.jpg';
+        $diskName = ImageService::uploadDisk();
+        $disk = Storage::disk($diskName);
+        $reference = $diskName === ImageService::SPACES_DISK ? 'spaces://'.$file : $file;
+        if (! $force && $this->exists($disk, $file)) {
+            return $reference;
+        }
+        $src = $this->loadImage($image);
+        if (! $src) {
+            throw new \RuntimeException('The image could not be read for the Instagram card.');
+        }
+        $w = self::WIDTH;
+        $h = self::HEIGHT;
+        $canvas = imagecreatetruecolor($w, $h);
+        $this->coverCopy($canvas, $src, $w, $h);
+        for ($i = 0; $i < 25; $i++) {
+            imagefilter($canvas, IMG_FILTER_GAUSSIAN_BLUR);
+        }
+        imagefilter($canvas, IMG_FILTER_BRIGHTNESS, -40);
+        // Fit the photo inside the canvas, keeping its ratio.
+        $sw = imagesx($src);
+        $sh = imagesy($src);
+        $scale = min($w / $sw, $h / $sh);
+        $dw = (int) round($sw * $scale);
+        $dh = (int) round($sh * $scale);
+        imagecopyresampled($canvas, $src, (int) (($w - $dw) / 2), (int) (($h - $dh) / 2), 0, 0, $dw, $dh, $sw, $sh);
+        imagedestroy($src);
+        $this->write($disk, $file, $canvas);
+
+        return $reference;
+    }
+
+    /** Raw JPEG bytes of a generated card (works for local and Spaces references). */
+    public function bytes(string $reference): string
+    {
+        [$disk, $path] = ImageService::resolve($reference);
+
+        return (string) Storage::disk($disk)->get($path);
     }
 
     public static function url(string $file): string
@@ -115,19 +161,53 @@ class ShareCardGenerator
         return ImageService::publicUrl($file);
     }
 
-    private function loadImage(Post $post): ?\GdImage
+    private function exists($disk, string $file): bool
     {
-        if (! $post->image) {
+        try {
+            return $disk->exists($file);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function write($disk, string $file, \GdImage $canvas): void
+    {
+        ob_start();
+        imagejpeg($canvas, null, 88);
+        $bytes = (string) ob_get_clean();
+        imagedestroy($canvas);
+        if (! $disk->put($file, $bytes, ['visibility' => 'public'])) {
+            throw new \RuntimeException('The card could not be saved to storage.');
+        }
+    }
+
+    private function loadImage(?string $image): ?\GdImage
+    {
+        if (! $image) {
             return null;
         }
         try {
-            if (ImageService::isRemoteUrl($post->image)) {
-                $raw = Http::timeout(15)->get($post->image)->body();
+            if (ImageService::isRemoteUrl($image)) {
+                $host = (string) parse_url($image, PHP_URL_HOST);
+                $raw = Http::timeout(15)->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+                    'Accept' => 'image/jpeg,image/png,image/webp,image/*;q=0.8,*/*;q=0.5',
+                    'Referer' => 'https://'.$host.'/',
+                ])->get($image)->body();
             } else {
-                [$disk, $path] = ImageService::resolve($post->image);
+                [$disk, $path] = ImageService::resolve($image);
                 $raw = Storage::disk($disk)->get($path);
             }
-            $img = $raw ? @imagecreatefromstring($raw) : false;
+            if (! $raw) {
+                return null;
+            }
+            $img = @imagecreatefromstring($raw);
+            if (! $img && function_exists('imagecreatefromwebp') && str_starts_with($raw, 'RIFF')) {
+                $img = @imagecreatefromwebp('data://application/octet-stream;base64,'.base64_encode($raw));
+            }
+            if (! $img && function_exists('imagecreatefromavif') && str_contains(substr($raw, 0, 16), 'ftyp')) {
+                $img = @imagecreatefromavif('data://application/octet-stream;base64,'.base64_encode($raw));
+            }
 
             return $img ?: null;
         } catch (\Throwable) {

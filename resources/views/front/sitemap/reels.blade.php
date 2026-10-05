@@ -1,11 +1,13 @@
 <?php echo '<?xml version="1.0" encoding="UTF-8"?>'; ?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
     <url><loc>{{ route('reels.index') }}</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
 @foreach($reels as $reel)
     <url>
         <loc>{{ $reel->url() }}</loc>
         <lastmod>{{ $reel->updated_at->toW3cString() }}</lastmod>
-        @if($reel->thumbnailUrl() && ($reel->videoUrl() || $reel->embedUrl()))
+        @if($reel->isImage() && $reel->imageUrl())
+        <image:image><image:loc>{{ $reel->imageUrl() }}</image:loc><image:title>{{ $reel->title }}</image:title></image:image>
+        @elseif($reel->thumbnailUrl() && ($reel->videoUrl() || $reel->embedUrl()))
         <video:video>
             <video:thumbnail_loc>{{ $reel->thumbnailUrl() }}</video:thumbnail_loc>
             <video:title>{{ $reel->title }}</video:title>

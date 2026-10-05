@@ -38,6 +38,9 @@ Route::get('/sitemap-tags.xml', [Front\SitemapController::class, 'tags'])->name(
 Route::get('/sitemap-pages.xml', [Front\SitemapController::class, 'pages'])->name('sitemap.pages');
 Route::get('/sitemap-authors.xml', [Front\SitemapController::class, 'authors'])->name('sitemap.authors');
 Route::get('/sitemap-reels.xml', [Front\SitemapController::class, 'reels'])->name('sitemap.reels');
+
+// Fallback for uploads when public/storage is not linked (shared hosting)
+Route::get('/storage/{path}', [Front\MediaController::class, 'storage'])->where('path', '.+')->name('media.storage');
 Route::get('/news-sitemap.xml', [Front\SitemapController::class, 'news'])->name('sitemap.news');
 Route::get('/robots.txt', [Front\SitemapController::class, 'robots'])->name('robots');
 Route::get('/{key}.txt', [Front\SitemapController::class, 'indexNowKey'])->where('key', '[a-f0-9]{32}')->name('indexnow.key');
@@ -74,6 +77,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('posts/{post}/request-indexing', [Admin\GoogleController::class, 'requestIndexing'])->name('posts.index-request');
         Route::post('posts/{post}/share/instagram', [Admin\SocialShareController::class, 'instagram'])->name('posts.share.instagram');
         Route::get('posts/{post}/share/card', [Admin\SocialShareController::class, 'card'])->name('posts.share.card');
+        Route::post('reels/{reel}/share/instagram', [Admin\SocialShareController::class, 'reel'])->name('reels.share.instagram');
         Route::post('shares/{share}/check', [Admin\SocialShareController::class, 'check'])->name('shares.check');
         Route::delete('shares/{share}', [Admin\SocialShareController::class, 'destroy'])->name('shares.destroy');
         Route::resource('reels', Admin\ReelController::class)->except(['show']);

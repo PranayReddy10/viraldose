@@ -33,7 +33,9 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // The framework's storage/{path} route for this private disk would shadow
+            // routes/web.php's public fallback (see MediaController) – keep it off.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],
