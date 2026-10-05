@@ -49,7 +49,7 @@ cp -f "$APP_DIR/deploy/bluehost/public_html/index.php" "$WEB_ROOT/index.php"
 # Point the bridge at the real app folder
 sed -i "s#__DIR__.'/../viraldose'#'$APP_DIR'#" "$WEB_ROOT/index.php"
 
-echo "==> Database & caches"
+echo "==> Database & caches (first run prints the admin login – copy it)"
 $PHP artisan migrate --force
 $PHP artisan db:seed --force
 APP_PUBLIC_PATH="$WEB_ROOT" $PHP artisan storage:link --force
@@ -58,6 +58,9 @@ $PHP artisan optimize
 
 chmod -R ug+rwX storage bootstrap/cache
 
+echo
+echo "Admin panel: $(grep -E '^APP_URL=' .env | cut -d= -f2)/admin"
+echo "Forgot the admin password?  $PHP artisan make:admin admin@viraldose.in --password='NewStrongPassword'"
 echo
 echo "Done. Add this cron job in cPanel → Cron Jobs (every minute):"
 echo "  * * * * * cd $APP_DIR && $PHP artisan schedule:run >> /dev/null 2>&1"

@@ -40,9 +40,10 @@ php artisan serve
 
 Sample content for a local preview: `php artisan db:seed --class=DemoContentSeeder`
 
-Admin login: `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env` (defaults to `admin@viraldose.in` / `ChangeMe123!`
-— **change it after first login** under *My profile*). Create more admins any time:
-`php artisan make:admin you@viraldose.in --name="Your Name"`.
+Admin login: `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env` (defaults to `admin@viraldose.in` / `ChangeMe123!`;
+the seeder prints the credentials it used — **change the password after first login** under *My profile*).
+Forgot it, or need another admin? `php artisan make:admin you@viraldose.in --password='NewStrongPassword'`
+resets the password of an existing account or creates a new admin.
 
 Tests: `php artisan test` (41+ feature/unit tests, SQLite in-memory).  Code style: `vendor/bin/pint`.
 

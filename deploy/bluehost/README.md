@@ -53,6 +53,7 @@ Layout A keeps secrets physically outside the web root, which is why it is prefe
 
 | Symptom | Fix |
 |---|---|
+| Admin password not accepted | Reset it: `php artisan make:admin admin@viraldose.in --password='NewStrongPassword'` (the seeder prints the initial password; a blank `ADMIN_PASSWORD` is replaced by a generated one in production). |
 | 500 error right after upload | `storage/` and `bootstrap/cache/` must be writable: `chmod -R 775 storage bootstrap/cache`. Check `storage/logs/laravel.log`. |
 | Images uploaded in admin don't show | Run `APP_PUBLIC_PATH=~/public_html php artisan storage:link --force` (layout A) or `php artisan storage:link` (B). |
 | CSS missing / unstyled | `~/public_html/build/manifest.json` must exist – re-run `deploy.sh` (layout A). |
