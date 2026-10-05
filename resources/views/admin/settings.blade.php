@@ -145,11 +145,12 @@
             </div>
             <ol class="mt-5 list-decimal space-y-1 pl-5 text-xs text-ink-700">
                 <li>Switch the Instagram account to Business/Creator and link it to a Facebook Page.</li>
-                <li>developers.facebook.com → create an app (Business) → add <em>Instagram Graph API</em>.</li>
+                <li>developers.facebook.com → create an app (Other → Business) → add product <em>Instagram</em> → “API setup with Facebook login”.</li>
                 <li>Graph API Explorer → permissions <code>instagram_basic, instagram_content_publish, pages_show_list, pages_read_engagement, business_management</code> → generate a user token → exchange for a long-lived token → get the <strong>Page access token</strong> (does not expire).</li>
-                <li>Find the Instagram business account ID: <code>GET /me/accounts?fields=instagram_business_account</code>.</li>
+                <li>With the long-lived token run <code>me/accounts?fields=name,access_token,instagram_business_account{id,username}</code> — copy <code>instagram_business_account.id</code> and the Page <code>access_token</code>.</li>
                 <li>Paste both values here and press Test connection. Images must be publicly reachable JPEGs — the app generates them automatically.</li>
             </ol>
+            <p class="mt-3 text-xs"><a href="https://github.com/PranayReddy10/viraldose/blob/main/docs/instagram-setup.md" target="_blank" rel="noopener" class="font-semibold text-brand-600 underline">Detailed step-by-step guide for the Page access token (docs/instagram-setup.md) →</a></p>
         </div>
         <div class="card p-6">
             <h2 class="mb-3 font-bold">Posting defaults</h2>
