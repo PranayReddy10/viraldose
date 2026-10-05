@@ -23,8 +23,12 @@ class AppServiceProvider extends ServiceProvider
         Paginator::defaultView('pagination.default');
         Paginator::defaultSimpleView('pagination.simple');
 
-        if ($this->app->isProduction() && str_starts_with((string) config('app.url'), 'https://')) {
-            URL::forceScheme('https');
+        if ($this->app->isProduction() && config('app.url')) {
+            // Shared hosting / proxies: build every URL from APP_URL, never from the request.
+            URL::forceRootUrl(config('app.url'));
+            if (str_starts_with((string) config('app.url'), 'https://')) {
+                URL::forceScheme('https');
+            }
         }
 
         $this->configureSpacesDisk();

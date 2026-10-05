@@ -1,0 +1,30 @@
+# ---------------------------------------------------------------------------
+# ViralDose on shared hosting where the whole project lives in public_html
+# (Bluehost primary domain). Routes every request into /public and blocks
+# direct access to application files. Nothing to change here.
+#
+# Preferred layout is the project OUTSIDE public_html – see deploy/bluehost.
+# ---------------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Never serve application internals or secrets
+    RewriteRule ^(\.env.*|\.git.*|\.htaccess|composer\.(json|lock)|package(-lock)?\.json|artisan|phpunit\.xml|vite\.config\.js|CLAUDE\.md|README\.md|\.editorconfig|\.gitattributes|\.gitignore|\.npmrc)$ - [F,L]
+    RewriteRule ^(app|bootstrap|config|database|deploy|node_modules|resources|routes|storage|tests|vendor)(/.*)?$ - [F,L]
+
+    # /public/... requested directly -> canonical URL without /public (avoids duplicate URLs)
+    RewriteCond %{THE_REQUEST} \s/+public/ [NC]
+    RewriteRule ^public/(.*)$ /$1 [R=301,L,NE]
+
+    # Everything else is handled by the Laravel public folder
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    # Without mod_rewrite fall back to the bootstrap below (no pretty URLs)
+    DirectoryIndex index.php
+</IfModule>
+
+Options -Indexes

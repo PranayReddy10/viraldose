@@ -10,7 +10,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
@@ -50,3 +50,10 @@ return Application::configure(basePath: dirname(__DIR__))
             return null;
         });
     })->create();
+
+// Shared hosting (e.g. Bluehost public_html): the public folder may live outside the project.
+if ($publicPath = $_ENV['APP_PUBLIC_PATH'] ?? $_SERVER['APP_PUBLIC_PATH'] ?? getenv('APP_PUBLIC_PATH')) {
+    $app->usePublicPath($publicPath);
+}
+
+return $app;

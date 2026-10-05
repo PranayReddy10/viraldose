@@ -68,6 +68,13 @@ Tests: `php artisan test` (41+ feature/unit tests, SQLite in-memory).  Code styl
    `/storage` and `/build` as static files with long cache headers (the `.htaccess` already does this on Apache).
 8. After any deploy: `php artisan optimize:clear && php artisan optimize`.
 
+## Bluehost / cPanel shared hosting (primary domain → public_html)
+
+See **`deploy/bluehost/README.md`**. Short version: keep the app in `~/viraldose`, run
+`bash ~/viraldose/deploy/bluehost/deploy.sh` once over cPanel Terminal, and it installs dependencies, migrates,
+copies the bridge `index.php` + assets into `~/public_html` and links storage. Alternatively upload the whole
+project into `public_html`: the repository root `.htaccess` routes everything to `public/` and blocks app files.
+
 ## Migrating from the old Varient site
 
 Keeping the old URLs alive with 301s is the single most important step for recovering rankings.
