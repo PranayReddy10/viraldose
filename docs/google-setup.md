@@ -15,8 +15,14 @@ automatic submission of new posts, sitemap submission/status, and GA4 traffic. A
 4. **IAM & Admin → Service Accounts → Create service account** → name `viraldose-site` → Create and continue
    → skip the optional role screens → Done.
 5. Copy the email shown (`viraldose-site@<project>.iam.gserviceaccount.com`).
-6. Open the account → **Keys → Add key → Create new key → JSON**. The file downloads; keep it private.
-7. Admin → **Settings → Google & Indexing** → upload the JSON → Save. It now shows "Connected as …".
+6. Click the account's email → tab **Keys** → **Add key → Create new key** → type **JSON** → Create.
+   A file like `viraldose-123456-ab12cd34ef56.json` downloads; keep it private.
+   Direct link to the list: https://console.cloud.google.com/iam-admin/serviceaccounts
+7. Admin → **Settings → Google & Indexing** → upload that JSON → Save. It now shows "Connected as …".
+
+> **Not this:** *APIs & Services → Credentials → Create credentials → API key* makes a plain API key
+> (the page with "API restrictions" and "Application restrictions"). ViralDose cannot use an API key –
+> only the service-account JSON from step 6 works. If that page is open, close it without saving.
 
 ## 3. Search Console access
 8. https://search.google.com/search-console → select the viraldose.in property (or add a Domain property
@@ -46,6 +52,8 @@ automatic submission of new posts, sitemap submission/status, and GA4 traffic. A
 | Permission denied (indexing) | The account is "Full user"; it must be **Owner**. |
 | insufficient permissions for this property (Analytics) | Access was granted on the Account, not the Property, or the ID is a `G-` code. |
 | 403 … API has not been used in project | Step 3: enable the API in the same project as the key. |
+| Uploaded file is rejected / "not a service account key" | You uploaded or pasted an API key. Create the JSON key under IAM & Admin → Service Accounts → Keys (step 6). |
+| "Service account key creation is disabled" | Workspace organisation policy `iam.disableServiceAccountKeyCreation`; an org admin must allow it, or use a personal Gmail project. |
 | Quota exceeded (Indexing API) | 200 URLs/day per project; sitemaps + IndexNow still submit everything. |
 
 Note: Google documents the Indexing API for job postings and live videos; news sites use it widely and it often

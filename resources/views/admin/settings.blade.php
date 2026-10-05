@@ -83,7 +83,7 @@
             <p class="mt-4 text-xs"><a href="https://github.com/PranayReddy10/viraldose/blob/main/docs/google-setup.md" target="_blank" rel="noopener" class="font-semibold text-brand-600 underline">Detailed step-by-step guide (docs/google-setup.md) →</a></p>
             <ol class="mt-2 list-decimal space-y-1 pl-5 text-xs text-ink-700">
                 <li>Google Cloud Console → create a project → enable <em>Search Console API</em>, <em>Web Search Indexing API</em> and <em>Google Analytics Data API</em>.</li>
-                <li>IAM → Service accounts → create one → Keys → add JSON key → upload it here.</li>
+                <li>IAM &amp; Admin → <strong>Service Accounts</strong> → create one → click its email → <strong>Keys</strong> tab → Add key → Create new key → <strong>JSON</strong> → upload the downloaded file here. (Not “APIs &amp; Services → Credentials → API key” – an API key does not work.)</li>
                 <li>Search Console → Settings → Users → add the service-account email as <strong>Owner</strong> (required for the Indexing API).</li>
                 <li>GA4 → Admin → Property access → add the same email as <strong>Viewer</strong>.</li>
             </ol>
