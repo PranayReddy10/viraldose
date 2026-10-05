@@ -82,8 +82,19 @@ class ShareCardGenerator
         imagefilledrectangle($canvas, $pad, $by - 44, $pad + $bw, $by + 2, $badgeColor);
         imagettftext($canvas, 24, 0, $pad + 18, $by - 10, $white, $bold, $badge);
 
-        // Footer: site name + handle
-        imagettftext($canvas, 30, 0, $pad, $footerY, $white, $bold, Str::upper(site_name()));
+        // Footer: logo (falls back to the site name) + handle
+        $logoFile = public_path('images/logo-white.png');
+        if (is_file($logoFile) && ($logo = @imagecreatefrompng($logoFile))) {
+            $lw = imagesx($logo);
+            $lh = imagesy($logo);
+            $targetH = 64;
+            $targetW = (int) round($lw * $targetH / $lh);
+            imagealphablending($canvas, true);
+            imagecopyresampled($canvas, $logo, $pad, $footerY - $targetH + 8, 0, 0, $targetW, $targetH, $lw, $lh);
+            imagedestroy($logo);
+        } else {
+            imagettftext($canvas, 30, 0, $pad, $footerY, $white, $bold, Str::upper(site_name()));
+        }
         $handle = '@'.ltrim((string) setting('instagram_username', 'viraldose_news'), '@');
         $hb = imagettfbbox(24, 0, $regular, $handle);
         imagettftext($canvas, 24, 0, $w - $pad - abs($hb[2] - $hb[0]), $footerY, $muted, $regular, $handle);

@@ -78,6 +78,26 @@ project into `public_html`: the repository root `.htaccess` routes everything to
 
 ## Migrating from the old Varient site
 
+### Fastest: import the SQL export (no access to the old database needed)
+
+Export the `posts` table from the old site's phpMyAdmin (plus `categories`, `images`, `users` if you can) and run:
+
+```bash
+php artisan import:varient-sql ~/posts.sql --dry-run                 # shows counts and unmapped categories
+php artisan import:varient-sql ~/posts.sql --download-images         # imports, keeps slugs, builds tags + redirects
+php artisan import:varient-sql ~/posts.sql --update --category-map="5:world,7:sports"   # fix categories later
+```
+
+- Slugs are kept, so every old `viraldose.in/post-slug` link 301-redirects to the new canonical URL automatically.
+- The legacy category ids of viraldose.in are pre-mapped in `config/varient-import.php` (edit there or pass
+  `--category-map`); unknown ids go to `--default-category` (news) and are listed at the end.
+- Hot-linked featured images are kept as remote URLs; `--download-images` copies them into local storage with
+  WebP variants. Images that only existed on the old server need the `images` table + `--image-base`.
+- Keywords become tags, page views are preserved, HTML is cleaned (editor markup, inline fonts) and sanitised.
+- Re-running is safe: posts are matched by their legacy id.
+
+### Alternative: import straight from the old database
+
 Keeping the old URLs alive with 301s is the single most important step for recovering rankings.
 
 1. Add the old database as the `legacy` connection in `.env` (`LEGACY_DB_*`).

@@ -10,12 +10,8 @@
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
 
-            <a href="{{ url('/') }}" class="flex items-center gap-2" aria-label="{{ site_name() }} home">
-                @if($logo)
-                    <img src="{{ $logo }}" alt="{{ site_name() }}" width="180" height="40" class="h-9 w-auto" fetchpriority="high">
-                @else
-                    <span class="text-2xl font-black tracking-tight"><span class="text-brand-600">Viral</span>Dose</span>
-                @endif
+            <a href="{{ url('/') }}" class="flex items-center" aria-label="{{ site_name() }} home">
+                <x-logo class="h-10 w-auto sm:h-12" :eager="true" />
             </a>
 
             <div class="hidden md:block text-xs text-ink-500">{{ now()->timezone(setting('timezone_display', 'Asia/Kolkata'))->format('l, d M Y') }}</div>

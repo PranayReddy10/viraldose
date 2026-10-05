@@ -10,7 +10,7 @@
 <footer class="mt-12 bg-ink-900 text-gray-300">
     <div class="container-site grid gap-10 py-12 md:grid-cols-2 lg:grid-cols-4">
         <div>
-            <a href="{{ url('/') }}" class="text-2xl font-black text-white"><span class="text-brand-500">Viral</span>Dose</a>
+            <a href="{{ url('/') }}" class="inline-block"><x-logo variant="dark" class="h-11 w-auto" /></a>
             <p class="mt-3 text-sm leading-relaxed">{{ setting('footer_about') }}</p>
             <ul class="mt-4 flex flex-wrap gap-3 text-sm">
                 @foreach($social as $key => $label)

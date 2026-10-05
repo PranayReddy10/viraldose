@@ -165,7 +165,7 @@ class Seo
 
     public function resolvedImage(): ?string
     {
-        return $this->image ?: media_url(setting('default_og_image')) ?: media_url(setting('logo'));
+        return $this->image ?: media_url(setting('default_og_image')) ?: asset('images/og-default.png');
     }
 
     public function resolvedCanonical(): string
@@ -300,7 +300,7 @@ class Seo
      */
     public static function publisher(bool $extended = false): array
     {
-        $logo = media_url(setting('publisher_logo')) ?: media_url(setting('logo'));
+        $logo = media_url(setting('publisher_logo')) ?: media_url(setting('logo')) ?: asset('images/publisher-logo.png');
         $data = [
             '@type' => setting('organization_type', 'NewsMediaOrganization'),
             'name' => site_name(),

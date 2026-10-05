@@ -15,9 +15,9 @@
 <div class="min-h-screen lg:flex">
     {{-- Sidebar --}}
     <aside id="admin-sidebar" class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col bg-[#222d32] text-gray-300 transition-transform lg:static lg:translate-x-0 lg:shrink-0">
-        <div class="flex h-14 items-center gap-2 bg-[#1a2226] px-5 text-white">
-            <span class="text-lg font-bold tracking-tight">{{ site_name() }}</span>
-            <span class="text-xs text-gray-400">· Admin</span>
+        <div class="flex h-14 items-center gap-2 bg-[#1a2226] px-4 text-white">
+            <img src="{{ media_url(setting('logo_dark')) ?: asset('images/logo-white.svg') }}" alt="{{ site_name() }}" class="h-8 w-auto">
+            <span class="ml-auto rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-300">Admin</span>
         </div>
         <div class="flex items-center gap-3 border-b border-white/5 px-5 py-4">
             <div class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-sm font-bold text-white">

@@ -8,7 +8,7 @@
 <body class="flex min-h-screen items-center justify-center bg-gray-900 px-4">
     <form method="post" action="{{ route('admin.login.attempt') }}" class="w-full max-w-sm rounded-lg bg-white p-8 shadow-xl">
         @csrf
-        <p class="text-center text-2xl font-black"><span class="text-brand-600">Viral</span>Dose</p>
+        <img src="{{ media_url(setting('logo')) ?: asset('images/logo.svg') }}" alt="{{ site_name() }}" class="mx-auto h-12 w-auto">
         <p class="mt-1 text-center text-sm text-ink-500">Sign in to the admin panel</p>
         @if($errors->any())<p class="mt-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{{ $errors->first() }}</p>@endif
         <div class="mt-6"><label class="label" for="email">Email</label><input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="username" class="input"></div>

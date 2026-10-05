@@ -56,6 +56,8 @@
         <link rel="apple-touch-icon" href="{{ $favicon }}">
     @else
         <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+        <link rel="icon" href="{{ asset('favicon-32.png') }}" sizes="32x32" type="image/png">
+        <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     @endif
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
