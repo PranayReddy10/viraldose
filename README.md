@@ -69,6 +69,13 @@ Tests: `php artisan test` (41+ feature/unit tests, SQLite in-memory).  Code styl
    `/storage` and `/build` as static files with long cache headers (the `.htaccess` already does this on Apache).
 8. After any deploy: `php artisan optimize:clear && php artisan optimize`.
 
+## Hostinger shared hosting
+
+The project is installed directly in `domains/viraldose.in/public_html`; the repository-root `.htaccess`
+routes to `public/`. Update via hPanel Git deploy or SSH `git pull`, then `php artisan migrate --force &&
+php artisan optimize:clear`. Import the old site with **Admin → Import old posts** (browser upload of
+`posts.sql`) or `php artisan import:varient-sql`. Details: `deploy/hostinger/README.md`.
+
 ## Bluehost / cPanel shared hosting (primary domain → public_html)
 
 See **`deploy/bluehost/README.md`**. Short version: keep the app in `~/viraldose`, run

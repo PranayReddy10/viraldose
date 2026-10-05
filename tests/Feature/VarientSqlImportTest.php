@@ -7,6 +7,7 @@ use App\Models\Post;
 use App\Support\SqlDumpReader;
 use Database\Seeders\CategorySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -103,5 +104,28 @@ class VarientSqlImportTest extends TestCase
         Storage::disk('public')->assertExists($post->image);
         $info = pathinfo($post->image);
         Storage::disk('public')->assertExists($info['dirname'].'/'.$info['filename'].'-medium.webp');
+    }
+
+    public function test_admin_import_page_uploads_and_runs_the_importer(): void
+    {
+        Storage::fake('local');
+        $this->seed(CategorySeeder::class);
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->get('/admin/import')->assertOk()->assertSee('Upload the Varient export');
+        $this->actingAs($admin)->post('/admin/import/upload', ['file' => new UploadedFile($this->fixture, 'posts.sql', 'text/plain', null, true)])->assertRedirect();
+        Storage::disk('local')->assertExists('imports/posts.sql');
+
+        $this->actingAs($admin)->post('/admin/import/run', ['file' => 'posts.sql', 'mode' => 'dry'])->assertRedirect('/admin/import');
+        $this->assertSame(0, Post::count());
+
+        $this->actingAs($admin)->post('/admin/import/run', ['file' => 'posts.sql', 'mode' => 'import', 'category_map' => '9:sports, 3:entertainment', 'default_category' => 'news'])
+            ->assertRedirect('/admin/import')->assertSessionHas('import_output');
+        $this->assertSame(4, Post::count());
+        $this->actingAs($admin)->get('/admin/import')->assertOk()->assertSee('Finished')->assertSee('4');
+
+        $this->actingAs($admin)->post('/admin/import/run', ['file' => '../../.env', 'mode' => 'dry'])->assertSessionHasErrors('file');
+        $this->actingAs($admin)->delete('/admin/import/posts.sql')->assertRedirect();
+        Storage::disk('local')->assertMissing('imports/posts.sql');
     }
 }

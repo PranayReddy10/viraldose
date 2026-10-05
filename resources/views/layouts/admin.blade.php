@@ -49,6 +49,7 @@
                 ['Contact Messages', 'admin.messages.index', 'admin/messages*', 'inbox', ['admin']],
                 ['SYSTEM', null, null, null],
                 ['Users', 'admin.users.index', 'admin/users*', 'users', ['admin']],
+                ['Import old posts', 'admin.import.index', 'admin/import*', 'redirect', ['admin']],
                 ['Storage', 'admin.settings.edit', 'admin/settings?tab=storage', 'cloud', ['admin'], ['tab' => 'storage']],
                 ['Settings', 'admin.settings.edit', 'admin/settings', 'settings', ['admin']],
             ];

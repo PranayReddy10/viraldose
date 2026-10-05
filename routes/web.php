@@ -112,6 +112,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('subscribers/export', [Admin\SubscriberController::class, 'export'])->name('subscribers.export');
             Route::resource('subscribers', Admin\SubscriberController::class)->only(['index', 'destroy']);
             Route::resource('messages', Admin\MessageController::class)->only(['index', 'show', 'destroy']);
+            Route::get('import', [Admin\ImportController::class, 'index'])->name('import.index');
+            Route::post('import/upload', [Admin\ImportController::class, 'upload'])->name('import.upload');
+            Route::post('import/run', [Admin\ImportController::class, 'run'])->name('import.run');
+            Route::delete('import/{file}', [Admin\ImportController::class, 'destroy'])->name('import.destroy');
         });
     });
 });
