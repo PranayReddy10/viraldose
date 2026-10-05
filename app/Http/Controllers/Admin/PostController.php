@@ -11,6 +11,7 @@ use App\Models\PostImage;
 use App\Models\Setting;
 use App\Models\Tag;
 use App\Models\User;
+use App\Services\FeedImporter;
 use App\Services\Google\GoogleClient;
 use App\Services\HtmlSanitizer;
 use App\Services\ImageService;
@@ -157,6 +158,20 @@ class PostController extends Controller
         }
 
         return back()->with('status', count($posts).' post(s) updated.');
+    }
+
+    public function pullContent(Request $request, Post $post, FeedImporter $importer)
+    {
+        $this->authorizePost($request, $post);
+        if (! $post->source_url) {
+            return back()->withErrors(['source_url' => 'Add the source URL first, then pull the article.']);
+        }
+        $before = $post->content;
+        if (! $importer->pullContent($post)) {
+            return back()->withErrors(['content' => 'Could not find a longer article at the source URL (paywall, blocked, or JavaScript-only page). Paste the text manually.']);
+        }
+
+        return back()->with('status', 'Article content pulled from the source page'.($before ? ' and replaced the previous text.' : '.'));
     }
 
     public function destroyImage(Request $request, PostImage $image)

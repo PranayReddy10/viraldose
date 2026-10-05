@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 
 class ImportFeedsCommand extends Command
 {
-    protected $signature = 'feeds:import {--id= : Only this feed id}';
+    protected $signature = 'feeds:import {--id= : Only this feed id} {--retry : Retry posts whose source page gave no article last time}';
 
     protected $description = 'Fetch all active RSS feeds and import new items as posts';
 
@@ -18,7 +18,8 @@ class ImportFeedsCommand extends Command
         foreach ($feeds as $feed) {
             $count = $importer->import($feed);
             $error = $feed->fresh()->last_error;
-            $this->line(sprintf('%-30s %s', $feed->name, $error ? "ERROR: {$error}" : "{$count} new"));
+            $filled = $feed->fetch_full_content ? $importer->refill($feed, limit: 20, retry: (bool) $this->option('retry')) : null;
+            $this->line(sprintf('%-30s %s%s', $feed->name, $error ? "ERROR: {$error}" : "{$count} new", $filled ? ", {$filled['done']} filled, {$filled['remaining']} pending" : ''));
         }
 
         return self::SUCCESS;

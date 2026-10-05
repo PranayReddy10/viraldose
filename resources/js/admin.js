@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             list.innerHTML = data.items.length
-                ? data.items.map((i) => `<li class="flex items-center gap-3 p-3">${i.image ? `<img src="${i.image}" class="h-10 w-14 rounded object-cover" alt="">` : ''}<span class="min-w-0"><span class="block truncate font-medium">${i.title}</span><span class="block text-xs text-ink-500">${i.date || ''}</span></span></li>`).join('')
+                ? data.items.map((i) => `<li class="flex items-center gap-3 p-3">${i.image ? `<img src="${i.image}" class="h-10 w-14 rounded object-cover" alt="">` : ''}<span class="min-w-0"><span class="block truncate font-medium">${i.title}</span><span class="block text-xs text-ink-500">${i.date || ''}${i.chars !== undefined ? ` · ${i.chars < 600 ? `teaser only (${i.chars} chars) – full article will be fetched from the page` : `${i.chars} chars of text in feed`}` : ''}</span></span></li>`).join('')
                 : '<li class="p-3 text-ink-500">Feed is valid but has no items.</li>';
         });
     }

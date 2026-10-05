@@ -15,11 +15,18 @@ use Illuminate\Support\Str;
  */
 class FeedImporter
 {
-    public function __construct(private HtmlSanitizer $sanitizer, private SearchEnginePinger $pinger) {}
+    /** Feed items with less text than this are treated as teasers and the source page is fetched. */
+    public const THIN_CONTENT_CHARS = 600;
 
-    public function import(RssFeed $feed): int
+    public function __construct(private HtmlSanitizer $sanitizer, private SearchEnginePinger $pinger, private ArticleExtractor $extractor) {}
+
+    /**
+     * @param  int|null  $seconds  Time budget for fetching full articles (web requests); the rest is refilled later.
+     */
+    public function import(RssFeed $feed, ?int $seconds = null): int
     {
         $feed = $feed->fresh() ?? $feed;
+        $deadline = $seconds ? microtime(true) + $seconds : null;
         try {
             $items = $this->fetch($feed->url);
         } catch (\Throwable $e) {
@@ -39,14 +46,27 @@ class FeedImporter
                 continue;
             }
             $publishedAt = $item['date'] ? min($item['date'], now()) : now();
+            $image = $feed->import_images ? $item['image'] : null;
+            $content = $item['content'] ?: '<p>'.e($item['summary']).'</p>';
+            $fetchedAt = null;
+            if ($feed->fetch_full_content && $item['link'] && $this->extractor->textLength($content) < self::THIN_CONTENT_CHARS && (! $deadline || microtime(true) < $deadline)) {
+                $full = $this->fullArticle($item['link'], $content);
+                $fetchedAt = now();
+                if ($full) {
+                    $content = $full['html'];
+                    $image = $image ?: ($feed->import_images ? $full['image'] : null);
+                }
+            }
+            $content = $this->sanitizer->clean($this->extractor->tidy($content, $item['link'] ?: $feed->url, $image));
             $post = Post::create([
                 'user_id' => $feed->user_id,
                 'category_id' => $feed->category_id,
                 'language' => $feed->language ?: 'en',
                 'title' => Str::limit($item['title'], 200, ''),
                 'excerpt' => Str::limit($item['summary'], 500, ''),
-                'content' => $this->sanitizer->clean($item['content'] ?: '<p>'.e($item['summary']).'</p>'),
-                'image' => $feed->import_images ? $item['image'] : null,
+                'content' => $content,
+                'image' => $image,
+                'content_fetched_at' => $fetchedAt,
                 'status' => $feed->auto_publish ? Post::STATUS_PUBLISHED : Post::STATUS_DRAFT,
                 'published_at' => $publishedAt,
                 'source_name' => $feed->name,
@@ -73,6 +93,76 @@ class FeedImporter
         ]);
 
         return $imported;
+    }
+
+    /**
+     * Download the source page and return its article when it is longer than what the feed gave us.
+     *
+     * @return array{html: string, image: ?string}|null
+     */
+    public function fullArticle(string $url, string $current = ''): ?array
+    {
+        try {
+            $article = $this->extractor->fromUrl($url);
+        } catch (\Throwable) {
+            return null;
+        }
+        if (! $article || $article['text_length'] <= $this->extractor->textLength($current)) {
+            return null;
+        }
+
+        return ['html' => $article['html'], 'image' => $article['image']];
+    }
+
+    /**
+     * Fetch full articles for already-imported posts that only hold a teaser.
+     *
+     * @return array{done: int, failed: int, remaining: int}
+     */
+    public function refill(?RssFeed $feed = null, int $limit = 10, bool $retry = false, ?int $seconds = null): array
+    {
+        $deadline = $seconds ? microtime(true) + $seconds : null;
+        $query = $this->thinPosts($feed, $retry);
+        $done = $failed = 0;
+        foreach ($query->orderByDesc('id')->limit($limit)->get() as $post) {
+            if ($deadline && microtime(true) > $deadline) {
+                break;
+            }
+            $done += $this->pullContent($post) ? 1 : 0;
+            $failed += $post->content_fetched_at && $this->extractor->textLength($post->content) < self::THIN_CONTENT_CHARS ? 1 : 0;
+        }
+
+        return ['done' => $done, 'failed' => $failed, 'remaining' => $this->thinPosts($feed, false)->count()];
+    }
+
+    /**
+     * Replace a post's content with the full article from its source URL. Returns true when content changed.
+     */
+    public function pullContent(Post $post): bool
+    {
+        $post->forceFill(['content_fetched_at' => now()])->saveQuietly();
+        if (! $post->source_url) {
+            return false;
+        }
+        $full = $this->fullArticle($post->source_url, (string) $post->content);
+        if (! $full) {
+            return false;
+        }
+        $image = $post->image ?: $full['image'];
+        $post->forceFill([
+            'content' => $this->sanitizer->clean($this->extractor->tidy($full['html'], $post->source_url, $image)),
+            'image' => $image,
+        ])->save();
+
+        return true;
+    }
+
+    private function thinPosts(?RssFeed $feed, bool $retry)
+    {
+        return Post::query()->whereNotNull('source_url')
+            ->when($feed, fn ($q) => $q->where('rss_feed_id', $feed->id), fn ($q) => $q->whereNotNull('rss_feed_id'))
+            ->when(! $retry, fn ($q) => $q->whereNull('content_fetched_at'))
+            ->whereRaw('LENGTH(content) < ?', [self::THIN_CONTENT_CHARS * 3]);
     }
 
     /**

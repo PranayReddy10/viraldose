@@ -37,7 +37,10 @@
                 <x-admin.field label="Tags" name="tags" :value="$tagString" help="Comma separated, e.g. cricket, ipl 2026" />
                 <x-admin.field label="Optional URL (source)" name="source_url" type="url" :value="$post->source_url" help="Original source link, shown under the article." />
             </div>
-            <x-admin.field label="Source name" name="source_name" :value="$post->source_name" />
+            <div class="flex flex-wrap items-end gap-3">
+                <div class="min-w-0 flex-1"><x-admin.field label="Source name" name="source_name" :value="$post->source_name" /></div>
+                @if($post->exists && $post->source_url)<button type="submit" form="form-pull-content" class="btn-outline mb-4 !px-3 !py-1.5 text-xs" title="Download the full article text and images from the source URL and replace the content"><x-admin.icon name="download" class="h-4 w-4" /> Pull full article from source</button>@endif
+            </div>
             <div class="mt-2 grid gap-x-8 gap-y-1 sm:grid-cols-2">
                 @if($user->canManageAllPosts())
                     <x-admin.checkbox label="Add to Slider" name="is_slider" :checked="$post->is_slider" />
@@ -279,6 +282,7 @@
     {{-- Action forms live outside the main form; buttons in the Google card target them via form="…" --}}
     <form id="form-trash" method="post" action="{{ route('admin.posts.destroy', $post) }}" class="hidden" data-confirm="Move this post to trash?">@csrf @method('DELETE')</form>
     <form id="form-inspect" method="post" action="{{ route('admin.posts.inspect', $post) }}" class="hidden">@csrf</form>
+    <form id="form-pull-content" method="post" action="{{ route('admin.posts.pull-content', $post) }}" class="hidden" data-confirm="Replace this post's content with the full article from the source page?">@csrf</form>
     <form id="form-index-request" method="post" action="{{ route('admin.posts.index-request', $post) }}" class="hidden">@csrf</form>
     <form id="form-instagram" method="post" action="{{ route('admin.posts.share.instagram', $post) }}" class="hidden">@csrf</form>
     @foreach($shares as $share)<form id="form-share-check-{{ $share->id }}" method="post" action="{{ route('admin.shares.check', $share) }}" class="hidden">@csrf</form>@endforeach

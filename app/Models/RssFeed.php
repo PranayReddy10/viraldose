@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class RssFeed extends Model
 {
     protected $fillable = [
-        'name', 'url', 'category_id', 'user_id', 'language', 'auto_publish', 'import_images', 'is_active',
+        'name', 'url', 'category_id', 'user_id', 'language', 'auto_publish', 'import_images', 'fetch_full_content', 'is_active',
         'max_items', 'imported_count', 'last_fetched_at', 'last_error',
     ];
 
@@ -18,6 +18,7 @@ class RssFeed extends Model
         return [
             'auto_publish' => 'boolean',
             'import_images' => 'boolean',
+            'fetch_full_content' => 'boolean',
             'is_active' => 'boolean',
             'last_fetched_at' => 'datetime',
         ];

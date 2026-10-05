@@ -18,6 +18,7 @@
     <div class="card space-y-3 p-5">
         <x-admin.checkbox label="Auto-publish imported items" name="auto_publish" :checked="$feed->auto_publish" help="Off = save as drafts for editing (recommended for SEO)." />
         <x-admin.checkbox label="Import featured image from feed" name="import_images" :checked="$feed->import_images" />
+        <x-admin.checkbox label="Fetch the full article from the source page" name="fetch_full_content" :checked="$feed->fetch_full_content ?? true" help="Most feeds only carry a teaser (one linked image + a line). When on, the story page is downloaded and the article body, with its images, is imported instead." />
         <x-admin.checkbox label="Active" name="is_active" :checked="$feed->is_active" />
         <button class="btn-primary w-full" type="submit">Save feed</button>
     </div>

@@ -39,13 +39,14 @@ class Post extends Model
         'user_id', 'category_id', 'title', 'slug', 'excerpt', 'content', 'image', 'image_alt', 'image_caption',
         'status', 'published_at', 'is_featured', 'is_breaking', 'is_slider', 'is_recommended', 'allow_comments',
         'meta_title', 'meta_description', 'meta_keywords', 'canonical_url', 'noindex', 'reading_time',
-        'source_name', 'source_url', 'legacy_id', 'language', 'post_type', 'video_url', 'audio_url', 'rss_feed_id', 'feed_guid',
+        'source_name', 'source_url', 'legacy_id', 'language', 'post_type', 'video_url', 'audio_url', 'rss_feed_id', 'feed_guid', 'content_fetched_at',
         'index_status', 'index_coverage', 'index_checked_at', 'last_crawled_at', 'indexing_requested_at', 'image_fetch_error',
     ];
 
     protected function casts(): array
     {
         return [
+            'content_fetched_at' => 'datetime',
             'published_at' => 'datetime',
             'is_featured' => 'boolean',
             'is_breaking' => 'boolean',

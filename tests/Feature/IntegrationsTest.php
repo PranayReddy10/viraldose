@@ -49,7 +49,7 @@ XML;
 
     public function test_rss_import_creates_drafts_deduplicates_and_sanitizes(): void
     {
-        Http::fake(['example.com/feed' => Http::response(self::RSS, 200)]);
+        Http::fake(['example.com/feed' => Http::response(self::RSS, 200), 'example.com/*' => Http::response('<html><body><p>Full body for the second story, long enough to be an article paragraph of its own.</p><p>Second paragraph.</p></body></html>', 200)]);
         $feed = RssFeed::create(['name' => 'Example', 'url' => 'https://example.com/feed', 'category_id' => Category::factory()->create()->id, 'user_id' => User::factory()->create()->id, 'max_items' => 10]);
 
         $count = app(FeedImporter::class)->import($feed);
@@ -63,6 +63,7 @@ XML;
         $this->assertSame('https://example.com/a', $a->source_url);
         $this->assertSame(['Cricket'], $a->tags->pluck('name')->all());
         $this->assertSame('https://example.com/b.jpg', Post::where('feed_guid', 'guid-b')->value('image'));
+        $this->assertStringContainsString('Full body for the second story', Post::where('feed_guid', 'guid-b')->value('content'));
 
         // Second run imports nothing new.
         $this->assertSame(0, app(FeedImporter::class)->import($feed->fresh()));
@@ -73,6 +74,7 @@ XML;
     {
         Http::fake([
             'example.com/feed' => Http::response(self::RSS, 200),
+            'example.com/*' => Http::response('', 404),
             'api.indexnow.org/*' => Http::response('', 202),
         ]);
         $feed = RssFeed::create(['name' => 'Example', 'url' => 'https://example.com/feed', 'category_id' => Category::factory()->create()->id, 'user_id' => User::factory()->create()->id, 'auto_publish' => true, 'max_items' => 1]);
@@ -236,7 +238,7 @@ XML;
 
     public function test_rss_feed_admin_crud_and_fetch(): void
     {
-        Http::fake(['example.com/feed' => Http::response(self::RSS, 200)]);
+        Http::fake(['example.com/feed' => Http::response(self::RSS, 200), 'example.com/*' => Http::response('', 404)]);
         $admin = $this->admin();
         $category = Category::factory()->create();
 

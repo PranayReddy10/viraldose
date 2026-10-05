@@ -69,6 +69,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('posts', Admin\PostController::class)->except(['show']);
         Route::delete('post-images/{image}', [Admin\PostController::class, 'destroyImage'])->name('posts.images.destroy');
         Route::delete('post-files/{file}', [Admin\PostController::class, 'destroyFile'])->name('posts.files.destroy');
+        Route::post('posts/{post}/pull-content', [Admin\PostController::class, 'pullContent'])->name('posts.pull-content');
         Route::post('posts/{post}/inspect', [Admin\GoogleController::class, 'inspect'])->name('posts.inspect');
         Route::post('posts/{post}/request-indexing', [Admin\GoogleController::class, 'requestIndexing'])->name('posts.index-request');
         Route::post('posts/{post}/share/instagram', [Admin\SocialShareController::class, 'instagram'])->name('posts.share.instagram');
@@ -89,6 +90,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // RSS feed import
             Route::post('feeds/preview', [Admin\RssFeedController::class, 'preview'])->name('feeds.preview');
             Route::post('feeds/{feed}/fetch', [Admin\RssFeedController::class, 'fetch'])->name('feeds.fetch');
+            Route::post('feeds/{feed}/refill', [Admin\RssFeedController::class, 'refill'])->name('feeds.refill');
             Route::resource('feeds', Admin\RssFeedController::class)->except(['show']);
 
             // Google Search Console / Indexing / Analytics
