@@ -267,4 +267,19 @@ XML;
         $this->actingAs($admin)->put('/admin/settings', ['site_name' => 'ViralDose', 'posts_per_page' => 12, 'post_url_format' => 'category', 'organization_type' => 'NewsMediaOrganization', 'language' => 'en', 'storage_driver' => 'public', 'google_service_account' => UploadedFile::fake()->createWithContent('bad.json', '{"type":"nope"}')])
             ->assertSessionHasErrors('google_service_account');
     }
+
+    public function test_settings_test_buttons_work_when_submitted_from_the_put_form(): void
+    {
+        $admin = $this->admin();
+        Setting::setMany(['spaces_bucket' => 'viraldose', 'spaces_key' => 'k', 'spaces_secret' => Crypt::encryptString('s'), 'spaces_endpoint' => 'https://blr1.digitaloceanspaces.com']);
+        Storage::fake('spaces', ['url' => 'https://viraldose.blr1.digitaloceanspaces.com']);
+
+        // Browser sends POST with the surrounding form's _method=PUT spoof field.
+        $this->actingAs($admin)->post('/admin/settings/test-storage', ['_method' => 'PUT'])
+            ->assertRedirect('/admin/settings?tab=storage')->assertSessionHas('status');
+        $this->assertStringContainsString('connected', strtolower(session('status')));
+
+        $this->actingAs($admin)->post('/admin/settings/test-instagram', ['_method' => 'PUT'])
+            ->assertRedirect()->assertSessionHasErrors('instagram_business_id'); // not configured, but no 405
+    }
 }

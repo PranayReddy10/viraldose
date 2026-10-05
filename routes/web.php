@@ -107,8 +107,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::resource('redirects', Admin\RedirectController::class)->only(['index', 'store', 'destroy']);
             Route::get('settings', [Admin\SettingController::class, 'edit'])->name('settings.edit');
             Route::put('settings', [Admin\SettingController::class, 'update'])->name('settings.update');
-            Route::post('settings/test-storage', [Admin\SettingController::class, 'testStorage'])->name('settings.test-storage');
-            Route::post('settings/test-instagram', [Admin\SettingController::class, 'testInstagram'])->name('settings.test-instagram');
+            // The test buttons live inside the settings form, which carries _method=PUT – accept both.
+            Route::match(['post', 'put'], 'settings/test-storage', [Admin\SettingController::class, 'testStorage'])->name('settings.test-storage');
+            Route::match(['post', 'put'], 'settings/test-instagram', [Admin\SettingController::class, 'testInstagram'])->name('settings.test-instagram');
             Route::get('subscribers/export', [Admin\SubscriberController::class, 'export'])->name('subscribers.export');
             Route::resource('subscribers', Admin\SubscriberController::class)->only(['index', 'destroy']);
             Route::resource('messages', Admin\MessageController::class)->only(['index', 'show', 'destroy']);
