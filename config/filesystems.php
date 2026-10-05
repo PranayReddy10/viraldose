@@ -59,7 +59,7 @@ return [
             'url' => env('DO_SPACES_CDN_URL'),
             'use_path_style_endpoint' => false,
             'visibility' => 'public',
-            'throw' => false,
+            'throw' => true,
             'report' => false,
         ],
 

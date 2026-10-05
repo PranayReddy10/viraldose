@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\StorageUploadException;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\NormalizeUrl;
 use App\Http\Middleware\SecurityHeaders;
@@ -30,6 +31,15 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Media could not be written (local permissions or DigitalOcean Spaces): show why, keep the form.
+        $exceptions->render(function (StorageUploadException $e, Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+
+            return back()->withInput()->withErrors(['image' => $e->getMessage()]);
+        });
 
         // Legacy URL support: before showing a 404, consult the redirects table
         // so links from the old site (and Google's index) keep working with 301s.

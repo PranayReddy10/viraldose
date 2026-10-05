@@ -45,8 +45,9 @@ class UserController extends Controller
             $data['password'] = $request->password;
         }
         if ($request->hasFile('avatar')) {
-            $this->images->delete($user->avatar);
+            $old = $user->avatar;
             $data['avatar'] = $this->images->store($request->file('avatar'), 'uploads/avatars');
+            $this->images->delete($old);
         }
         if ($user->id === $request->user()->id) {
             // Never let an admin lock themselves out.

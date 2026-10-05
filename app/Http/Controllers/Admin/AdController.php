@@ -66,10 +66,10 @@ class AdController extends Controller
         $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
         unset($data['image']);
         if ($request->hasFile('image')) {
+            $data['image'] = $this->images->store($request->file('image'), 'uploads/ads');
             if ($ad) {
                 $this->images->delete($ad->image);
             }
-            $data['image'] = $this->images->store($request->file('image'), 'uploads/ads');
         }
 
         return $data;

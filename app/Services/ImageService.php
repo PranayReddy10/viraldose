@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Exceptions\StorageUploadException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -65,11 +67,46 @@ class ImageService
         $base = Str::limit($base, 60, '').'-'.Str::lower(Str::random(6));
         $relative = "{$dir}/{$base}.{$ext}";
 
-        $disk->putFileAs($dir, $file, "{$base}.{$ext}", ['visibility' => 'public']);
+        try {
+            $stored = $disk->putFileAs($dir, $file, "{$base}.{$ext}", ['visibility' => 'public']);
+            if ($stored === false || ! $disk->exists($relative)) {
+                throw new \RuntimeException('the storage did not confirm the write');
+            }
+        } catch (StorageUploadException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            $where = $diskName === self::SPACES_DISK ? 'DigitalOcean Spaces (check Settings → Storage: key, secret, bucket, region/endpoint)' : 'the local storage folder (check that storage/app/public is writable)';
+            throw new StorageUploadException('Upload failed – could not write to '.$where.'. '.Str::limit($e->getMessage(), 200), 0, $e);
+        }
 
         $reference = $diskName === self::SPACES_DISK ? 'spaces://'.$relative : $relative;
 
         if ($variants && in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'], true)) {
+            $this->generateVariants($reference);
+        }
+
+        return $reference;
+    }
+
+    /**
+     * Stores raw image bytes (e.g. a downloaded file) on the active disk and
+     * builds the variants. Returns the stored reference.
+     */
+    public function storeBytes(string $relative, string $bytes, bool $variants = true): string
+    {
+        $diskName = static::uploadDisk();
+        $disk = Storage::disk($diskName);
+        try {
+            if (! $disk->put($relative, $bytes, ['visibility' => 'public']) || ! $disk->exists($relative)) {
+                throw new \RuntimeException('the storage did not confirm the write');
+            }
+        } catch (StorageUploadException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            throw new StorageUploadException('Could not write to '.($diskName === self::SPACES_DISK ? 'DigitalOcean Spaces' : 'local storage').': '.Str::limit($e->getMessage(), 200), 0, $e);
+        }
+        $reference = $diskName === self::SPACES_DISK ? 'spaces://'.$relative : $relative;
+        if ($variants) {
             $this->generateVariants($reference);
         }
 
@@ -113,6 +150,7 @@ class ImageService
         foreach (self::SIZES as $size => $max) {
             $img = $width > $max ? $this->resize($src, $width, $height, $max) : $src;
             $disk->put("{$dir}/{$name}-{$size}.webp", $this->encode($img, 'webp'), ['visibility' => 'public']);
+            Cache::forever('img.variant.'.md5($diskName."{$dir}/{$name}-{$size}.webp"), true);
             if ($img !== $src) {
                 imagedestroy($img);
             }
@@ -155,9 +193,14 @@ class ImageService
         [$diskName, $path] = static::resolve($reference);
         $disk = Storage::disk($diskName);
         $info = pathinfo($path);
-        $disk->delete($path);
-        foreach (array_keys(self::SIZES) as $size) {
-            $disk->delete("{$info['dirname']}/{$info['filename']}-{$size}.webp");
+        try {
+            $disk->delete($path);
+            foreach (array_keys(self::SIZES) as $size) {
+                $disk->delete("{$info['dirname']}/{$info['filename']}-{$size}.webp");
+                Cache::forget('img.variant.'.md5($diskName."{$info['dirname']}/{$info['filename']}-{$size}.webp"));
+            }
+        } catch (\Throwable) {
+            // An orphaned file is better than a failed save.
         }
     }
 
@@ -201,8 +244,16 @@ class ImageService
             return asset('storage/'.($cache[$variant] ? $variant : $path));
         }
 
-        // Remote disk: variants are always generated at upload time, so skip the round-trip.
-        return Storage::disk($diskName)->url($variant);
+        // Remote disk: remember whether the variant exists (one check per file, cached) instead of assuming.
+        $exists = Cache::rememberForever('img.variant.'.md5($diskName.$variant), function () use ($diskName, $variant) {
+            try {
+                return Storage::disk($diskName)->exists($variant);
+            } catch (\Throwable) {
+                return false;
+            }
+        });
+
+        return Storage::disk($diskName)->url($exists ? $variant : $path);
     }
 
     public static function srcset(?string $reference): ?string

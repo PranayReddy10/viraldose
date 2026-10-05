@@ -118,10 +118,9 @@ class ReelController extends Controller
         }
 
         if ($request->hasFile('video')) {
-            if ($reel->source_type === 'upload') {
-                $this->images->delete($reel->video_path);
-            }
+            $oldVideo = $reel->source_type === 'upload' ? $reel->video_path : null;
             $reel->video_path = $this->images->store($request->file('video'), 'uploads/reels', variants: false);
+            $this->images->delete($oldVideo);
         } elseif ($data['source_type'] === 'url') {
             $reel->video_path = $data['video_url'];
         }
@@ -129,8 +128,9 @@ class ReelController extends Controller
             $reel->video_path = null;
         }
         if ($request->hasFile('thumbnail')) {
-            $this->images->delete($reel->thumbnail);
+            $oldThumb = $reel->thumbnail;
             $reel->thumbnail = $this->images->store($request->file('thumbnail'), 'uploads/reels');
+            $this->images->delete($oldThumb);
         } elseif (! empty($data['thumbnail_url'])) {
             $reel->thumbnail = $data['thumbnail_url'];
         }

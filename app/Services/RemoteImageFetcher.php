@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Post;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -66,12 +65,15 @@ class RemoteImageFetcher
         $base = Str::limit(Str::slug(pathinfo((string) parse_url($url, PHP_URL_PATH), PATHINFO_FILENAME) ?: $post->slug), 50, '') ?: 'image';
         $path = "{$dir}/{$base}-".Str::lower(Str::random(6)).".{$ext}";
 
-        Storage::disk(ImageService::LOCAL_DISK)->put($path, $body, ['visibility' => 'public']);
-        $this->images->generateVariants($path);
+        try {
+            $reference = $this->images->storeBytes($path, $body);
+        } catch (\Throwable $e) {
+            return $this->fail($post, $e->getMessage());
+        }
 
-        Post::withoutTimestamps(fn () => $post->forceFill(['image' => $path, 'image_fetch_error' => null])->saveQuietly());
+        Post::withoutTimestamps(fn () => $post->forceFill(['image' => $reference, 'image_fetch_error' => null])->saveQuietly());
 
-        return ['ok' => true, 'message' => "saved {$path} (".round(strlen($body) / 1024).' KB)'];
+        return ['ok' => true, 'message' => "saved {$reference} (".round(strlen($body) / 1024).' KB)'];
     }
 
     private function download(string $url, string $host, string $accept, ?string &$error = null): ?string

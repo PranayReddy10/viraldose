@@ -19,6 +19,7 @@ use App\Services\InstagramPublisher;
 use App\Services\SearchEnginePinger;
 use App\Services\SeoAnalyzer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class PostController extends Controller
@@ -211,8 +212,11 @@ class PostController extends Controller
         } elseif ($request->input('save_as') === 'publish') {
             $data['status'] = Post::STATUS_PUBLISHED;
         }
-        if (! $request->boolean('scheduled') && $data['status'] === Post::STATUS_PUBLISHED && ! $post->exists) {
-            $data['published_at'] = $data['published_at'] ?? now();
+        if (! $request->boolean('scheduled') && $data['status'] === Post::STATUS_PUBLISHED) {
+            $current = $post->exists ? $post->published_at : null;
+            $requested = ! empty($data['published_at']) ? Carbon::parse($data['published_at']) : $current;
+            // Not scheduled: publish now unless an existing past date should be kept.
+            $data['published_at'] = ($requested && $requested->lte(now())) ? $requested : now();
         }
 
         if (! $post->exists) {
@@ -225,16 +229,19 @@ class PostController extends Controller
             unset($data['is_featured'], $data['is_slider'], $data['is_breaking'], $data['is_recommended']);
         }
 
+        $removed = null;
         if ($request->boolean('remove_image') && $post->image) {
+            $removed = $post->image;
             $this->images->delete($post->image);
             $post->image = null;
         }
         if ($request->hasFile('image')) {
-            if ($post->image) {
-                $this->images->delete($post->image);
+            $old = $post->image;
+            $post->image = $this->images->store($request->file('image'), 'uploads/posts'); // throws on failure, old image untouched
+            if ($old && $old !== $post->image) {
+                $this->images->delete($old);
             }
-            $post->image = $this->images->store($request->file('image'), 'uploads/posts');
-        } elseif ($request->filled('image_url')) {
+        } elseif ($request->filled('image_url') && $request->image_url !== $post->image && $request->image_url !== $removed) {
             $post->image = $request->image_url;
         }
 

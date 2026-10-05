@@ -110,7 +110,7 @@
     <div data-tab-panel="storage" class="{{ $tab === 'storage' ? '' : 'hidden' }} card max-w-3xl p-6">
         <h2 class="font-bold">Media storage</h2>
         <p class="mb-4 mt-1 text-sm text-ink-500">New uploads go to the selected storage. Existing files keep working wherever they were uploaded.</p>
-        <x-admin.select label="Storage driver" name="storage_driver" :value="$s('storage_driver')" :options="['public' => 'Local server (storage/app/public)', 'spaces' => 'DigitalOcean Spaces (S3-compatible, CDN)']" />
+        <x-admin.select label="Storage driver" name="storage_driver" :value="$s('storage_driver')" :options="['public' => 'Local server (storage/app/public)', 'spaces' => 'DigitalOcean Spaces (S3-compatible, CDN)']" help="Currently active for new uploads: {{ \App\Services\ImageService::uploadDisk() === 'spaces' ? 'DigitalOcean Spaces' : 'Local server' }}. Save, then press Test connection – uploads show a clear error if the Space rejects them." />
         <div class="grid gap-4 sm:grid-cols-2">
             <x-admin.field label="Spaces access key" name="spaces_key" :value="$s('spaces_key')" />
             <div class="mb-4">
