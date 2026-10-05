@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Post;
+use App\Services\RemoteImageFetcher;
 use App\Support\SqlDumpReader;
 use Database\Seeders\CategorySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -127,5 +128,64 @@ class VarientSqlImportTest extends TestCase
         $this->actingAs($admin)->post('/admin/import/run', ['file' => '../../.env', 'mode' => 'dry'])->assertSessionHasErrors('file');
         $this->actingAs($admin)->delete('/admin/import/posts.sql')->assertRedirect();
         Storage::disk('local')->assertMissing('imports/posts.sql');
+    }
+
+    public function test_remote_image_fetcher_downloads_records_failures_and_retries(): void
+    {
+        Storage::fake('public');
+        $jpeg = (function () {
+            ob_start();
+            imagejpeg(imagecreatetruecolor(900, 600));
+
+            return ob_get_clean();
+        })();
+        Http::fake([
+            'cdn.good.example/*' => Http::response($jpeg, 200, ['Content-Type' => 'application/octet-stream']), // wrong header, real image
+            'cdn.blocked.example/*' => Http::sequence()->push('forbidden', 403)->push($jpeg, 200, ['Content-Type' => 'image/jpeg']),
+            'cdn.html.example/*' => Http::response('<html>not an image</html>', 200, ['Content-Type' => 'text/html']),
+        ]);
+        $category = Category::factory()->create();
+        $good = Post::factory()->create(['category_id' => $category->id, 'image' => 'https://cdn.good.example/a/photo.jpg?x=1']);
+        $blocked = Post::factory()->create(['category_id' => $category->id, 'image' => 'https://cdn.blocked.example/b.jpg']);
+        $html = Post::factory()->create(['category_id' => $category->id, 'image' => 'https://cdn.html.example/c.jpg']);
+        Post::factory()->create(['category_id' => $category->id, 'image' => 'uploads/local.jpg']);
+
+        $this->artisan('images:fetch-remote', ['--limit' => 10])->assertSuccessful();
+
+        $good->refresh();
+        $this->assertStringStartsWith('uploads/imported/', $good->image);
+        Storage::disk('public')->assertExists($good->image);
+        $this->assertStringContainsString('HTTP 403', $blocked->fresh()->image_fetch_error);
+        $this->assertStringContainsString('not an image', $html->fresh()->image_fetch_error);
+        $this->assertStringStartsWith('https://', $blocked->fresh()->image); // remote URL kept as fallback
+        $this->assertSame(0, RemoteImageFetcher::pendingQuery()->whereNull('image_fetch_error')->count());
+
+        // Retry after the source starts responding (second response in the sequence).
+        $this->artisan('images:fetch-remote', ['--retry' => true])->assertSuccessful();
+        $this->assertStringStartsWith('uploads/imported/', $blocked->fresh()->image);
+        $this->assertNull($blocked->fresh()->image_fetch_error);
+
+        // Admin button runs the same fetcher.
+        $this->actingAs($this->admin())->post('/admin/import/fetch-images', ['retry' => 1])->assertRedirect('/admin/import')->assertSessionHas('import_output');
+    }
+
+    public function test_import_continues_when_a_row_fails_and_unwraps_div_soup(): void
+    {
+        $this->seed(CategorySeeder::class);
+        $this->admin();
+        $fixture = sys_get_temp_dir().'/varient-broken.sql';
+        file_put_contents($fixture, str_replace(
+            "'<p>Body two</p>'",
+            "'<div><div><h2>Heading</h2><p>Body two</p></div></div>'",
+            str_replace("(2, 1, 'Unknown category story'", '(2, 1, NULL', file_get_contents($this->fixture)),
+        ));
+
+        $this->artisan('import:varient-sql', ['file' => $fixture])->assertSuccessful();
+
+        // Row 2 has a NULL title (required) -> failed, the other three imported.
+        $this->assertSame(3, Post::count());
+        $this->assertNull(Post::where('legacy_id', 2)->first());
+        $this->assertStringNotContainsString('<div>', Post::where('legacy_id', 1)->value('content'));
+        @unlink($fixture);
     }
 }

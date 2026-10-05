@@ -98,8 +98,9 @@ php artisan import:varient-sql ~/posts.sql --update --category-map="5:world,7:sp
 - Slugs are kept, so every old `viraldose.in/post-slug` link 301-redirects to the new canonical URL automatically.
 - The legacy category ids of viraldose.in are pre-mapped in `config/varient-import.php` (edit there or pass
   `--category-map`); unknown ids go to `--default-category` (news) and are listed at the end.
-- Hot-linked featured images are kept as remote URLs; `--download-images` copies them into local storage with
-  WebP variants. Images that only existed on the old server need the `images` table + `--image-base`.
+- Hot-linked featured images are copied into local storage with WebP variants by `images:fetch-remote` (runs
+  every 5 minutes from the scheduler, or on demand from Admin → Import old posts); failures are recorded per post
+  and retryable. Images that only existed on the old server need the `images` table + `--image-base`.
 - Keywords become tags, page views are preserved, HTML is cleaned (editor markup, inline fonts) and sanitised.
 - Re-running is safe: posts are matched by their legacy id.
 

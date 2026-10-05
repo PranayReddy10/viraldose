@@ -115,6 +115,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('import', [Admin\ImportController::class, 'index'])->name('import.index');
             Route::post('import/upload', [Admin\ImportController::class, 'upload'])->name('import.upload');
             Route::post('import/run', [Admin\ImportController::class, 'run'])->name('import.run');
+            Route::post('import/fetch-images', [Admin\ImportController::class, 'fetchImages'])->name('import.fetch-images');
             Route::delete('import/{file}', [Admin\ImportController::class, 'destroy'])->name('import.destroy');
         });
     });

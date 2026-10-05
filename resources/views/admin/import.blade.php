@@ -36,11 +36,22 @@
                     </div>
                     <x-admin.select label="Default category (for unmapped legacy ids)" name="default_category" value="news" :options="$categories->pluck('name', 'slug')" />
                     <x-admin.field label="Category map override" name="category_map" :value="collect($map)->map(fn ($slug, $id) => $id.':'.$slug)->implode(', ')" help="Old category id → new category slug, comma separated. Unknown slugs are created. Leave as is to use the built-in viraldose.in mapping." />
-                    <x-admin.checkbox label="Download hot-linked featured images into local storage (recommended, slower)" name="download_images" :checked="true" />
+                    <x-admin.checkbox label="Also start downloading featured images during the import (first minute; the rest continues in step 3)" name="download_images" :checked="true" />
                     <button class="btn-primary">Run</button>
                     <p class="text-xs text-ink-500">Safe to run again: posts are matched by their old id and never duplicated. Large imports may take a few minutes – keep the tab open.</p>
                 </form>
             @endif
+        </section>
+
+        <section class="card p-5">
+            <h2 class="font-bold">3. Download remote images</h2>
+            <p class="mt-1 text-sm text-ink-700">Imported posts whose featured image is still a link to another website are copied into your own storage (sites like Times of India block hot-linked images). Runs 15 posts per click; the scheduler also does this automatically every 5 minutes.</p>
+            <p class="mt-2 text-sm"><strong>{{ number_format($remoteImages) }}</strong> waiting · <strong>{{ number_format($failedImages) }}</strong> failed</p>
+            <form method="post" action="{{ route('admin.import.fetch-images') }}" class="mt-3 flex flex-wrap gap-2">
+                @csrf
+                <button class="btn-primary" @disabled($remoteImages === 0)>Download next 15</button>
+                @if($failedImages > 0)<button name="retry" value="1" class="btn-outline">Retry failed</button>@endif
+            </form>
         </section>
 
         @if($output)

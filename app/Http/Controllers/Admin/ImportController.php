@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Post;
+use App\Services\RemoteImageFetcher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
@@ -28,6 +29,8 @@ class ImportController extends Controller
             'categories' => Category::ordered()->get(['id', 'name', 'slug', 'parent_id']),
             'map' => config('varient-import.category_map', []),
             'output' => session('import_output'),
+            'remoteImages' => RemoteImageFetcher::pendingQuery()->whereNull('image_fetch_error')->count(),
+            'failedImages' => RemoteImageFetcher::pendingQuery()->whereNotNull('image_fetch_error')->count(),
         ]);
     }
 
@@ -85,6 +88,16 @@ class ImportController extends Controller
             $output = '✖ Error: '.$e->getMessage();
         }
         Artisan::call('optimize:clear');
+
+        return redirect()->route('admin.import.index')->with('import_output', $output);
+    }
+
+    public function fetchImages(Request $request, RemoteImageFetcher $fetcher)
+    {
+        @set_time_limit(300);
+        $result = $fetcher->run(15, $request->boolean('retry'), 90);
+        $output = "Downloaded {$result['done']}, failed {$result['failed']}, remaining {$result['remaining']}.\n\n".implode("\n", $result['lines']);
+        Post::flushCache();
 
         return redirect()->route('admin.import.index')->with('import_output', $output);
     }

@@ -18,3 +18,4 @@ Schedule::call(function () {
 Schedule::command('feeds:import')->hourly()->withoutOverlapping();
 Schedule::command('posts:ping')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('social:process')->everyMinute()->withoutOverlapping();
+Schedule::command('images:fetch-remote --limit=10')->everyFiveMinutes()->withoutOverlapping();

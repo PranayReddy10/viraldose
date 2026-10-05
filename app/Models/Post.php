@@ -40,7 +40,7 @@ class Post extends Model
         'status', 'published_at', 'is_featured', 'is_breaking', 'is_slider', 'is_recommended', 'allow_comments',
         'meta_title', 'meta_description', 'meta_keywords', 'canonical_url', 'noindex', 'reading_time',
         'source_name', 'source_url', 'legacy_id', 'language', 'post_type', 'video_url', 'audio_url', 'rss_feed_id', 'feed_guid',
-        'index_status', 'index_coverage', 'index_checked_at', 'last_crawled_at', 'indexing_requested_at',
+        'index_status', 'index_coverage', 'index_checked_at', 'last_crawled_at', 'indexing_requested_at', 'image_fetch_error',
     ];
 
     protected function casts(): array

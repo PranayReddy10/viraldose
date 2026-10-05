@@ -30,7 +30,13 @@ Do **not** import `posts.sql` into the new database with phpMyAdmin – the tabl
    `php artisan import:varient-sql ~/posts.sql --dry-run` and
    `php artisan import:varient-sql ~/posts.sql --download-images`.
 
-Both are safe to repeat; posts are matched by their old id.
+Both are safe to repeat; posts are matched by their old id. Rows that fail are listed at the end and the
+rest still import.
+
+**Images:** old posts mostly hot-link pictures from other news sites, which often block that. Step 3 on the
+Import page (“Download next 15”) copies them into your own storage; the cron job also does it automatically
+(`images:fetch-remote`, every 5 minutes) once the cron below is set up. Failed ones show a reason and can be
+retried; a failed image leaves the remote link in place.
 
 ## Cron (hPanel → Advanced → Cron Jobs)
 

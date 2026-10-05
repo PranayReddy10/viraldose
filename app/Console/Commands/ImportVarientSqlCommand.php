@@ -10,12 +10,11 @@ use App\Models\User;
 use App\Services\EmbedRenderer;
 use App\Services\HtmlSanitizer;
 use App\Services\ImageService;
+use App\Services\RemoteImageFetcher;
 use App\Support\PostUrl;
 use App\Support\SqlDumpReader;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -54,8 +53,9 @@ class ImportVarientSqlCommand extends Command
     /** @var array<int, Category> */
     private array $categoryCache = [];
 
-    public function handle(HtmlSanitizer $sanitizer, ImageService $images): int
+    public function handle(HtmlSanitizer $sanitizer, ImageService $images, RemoteImageFetcher $fetcher): int
     {
+        $started = microtime(true);
         $file = $this->argument('file');
         try {
             $readers = array_map(fn ($f) => new SqlDumpReader($f), array_merge([$file], $this->option('extra')));
@@ -86,7 +86,7 @@ class ImportVarientSqlCommand extends Command
             return self::FAILURE;
         }
 
-        $stats = ['imported' => 0, 'updated' => 0, 'skipped' => 0, 'images_downloaded' => 0, 'unmapped' => []];
+        $stats = ['imported' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'images_downloaded' => 0, 'unmapped' => [], 'errors' => []];
         $rows = [];
         foreach ($readers as $reader) {
             foreach ($reader->rows('posts') as $row) {
@@ -123,48 +123,13 @@ class ImportVarientSqlCommand extends Command
                 continue;
             }
 
-            $isPublished = (int) ($row['status'] ?? 1) === 1 && (int) ($row['visibility'] ?? 1) === 1;
-            $createdAt = $this->date($row['created_at'] ?? null) ?? now();
-            $image = $this->resolveImage($row, $images, $stats);
-            $video = $row['video_url'] ?: $this->videoFromEmbed($row['video_embed_code'] ?? null);
-            $type = match ($row['post_type'] ?? 'article') {
-                'video' => 'video', 'gallery' => 'gallery', 'audio' => 'audio', default => 'article',
-            };
-            if ($type === 'video' && ! EmbedRenderer::video($video)) {
-                $type = 'article';
+            try {
+                $this->importRow($row, $legacyId, $category, $author, $sanitizer, $images, $fetcher, $stats, $started);
+                $stats['imported']++;
+            } catch (\Throwable $e) {
+                $stats['failed']++;
+                $stats['errors'][] = '#'.$legacyId.' '.Str::limit((string) ($row['title'] ?? ''), 50).' – '.Str::limit($e->getMessage(), 160);
             }
-
-            $post = new Post([
-                'user_id' => $this->mapUser($row['user_id'] ?? null, $author),
-                'category_id' => $category->id,
-                'language' => setting('language', 'en'),
-                'post_type' => $type,
-                'video_url' => $type === 'video' ? $video : null,
-                'title' => Str::limit(trim(html_entity_decode($row['title'] ?? 'Untitled', ENT_QUOTES | ENT_HTML5, 'UTF-8')), 200, ''),
-                'slug' => $row['slug'] ?: Str::slug($row['title'] ?? ''),
-                'excerpt' => Str::limit(trim(strip_tags(html_entity_decode($row['summary'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'))), 500, ''),
-                'content' => $sanitizer->clean($this->normalizeContent($row['content'] ?? '')),
-                'image' => $image,
-                'image_alt' => Str::limit(trim((string) ($row['image_description'] ?? '')), 200, '') ?: null,
-                'status' => $isPublished ? Post::STATUS_PUBLISHED : Post::STATUS_DRAFT,
-                'published_at' => $createdAt,
-                'meta_keywords' => Str::limit(trim((string) ($row['keywords'] ?? '')), 255, '') ?: null,
-                'source_url' => $row['optional_url'] ?: ($row['post_url'] ?: null),
-                'legacy_id' => $legacyId,
-            ]);
-            $post->created_at = $createdAt;
-            $post->updated_at = $this->date($row['updated_at'] ?? null) ?? $createdAt;
-            $post->save();
-            Post::withoutTimestamps(fn () => $post->forceFill(['views' => (int) ($row['pageviews'] ?? 0)])->saveQuietly());
-
-            // Keywords double as tags (first 6) so archives and related-post linking work.
-            $keywords = collect(explode(',', (string) ($row['keywords'] ?? '')))->map(fn ($k) => trim($k))->filter()->take(6)->implode(',');
-            if ($keywords) {
-                $post->tags()->sync(Tag::syncFromString($keywords));
-            }
-
-            $this->redirects($post, $row);
-            $stats['imported']++;
         }
         $bar->finish();
         $this->newLine(2);
@@ -172,8 +137,18 @@ class ImportVarientSqlCommand extends Command
         Post::flushCache();
         Category::flushCache();
 
-        $this->table(['Imported', 'Updated', 'Skipped (already imported)', 'Images downloaded'],
-            [[$stats['imported'], $stats['updated'], $stats['skipped'], $stats['images_downloaded']]]);
+        $this->table(['Imported', 'Failed', 'Updated', 'Skipped (already imported)', 'Images downloaded'],
+            [[$stats['imported'], $stats['failed'], $stats['updated'], $stats['skipped'], $stats['images_downloaded']]]);
+        if ($stats['errors']) {
+            $this->warn('Rows that could not be imported:');
+            foreach ($stats['errors'] as $line) {
+                $this->line('  '.$line);
+            }
+        }
+        $remaining = RemoteImageFetcher::pendingQuery()->whereNull('image_fetch_error')->count();
+        if ($remaining > 0) {
+            $this->line("{$remaining} posts still use remote image URLs – they are downloaded automatically by the scheduler (images:fetch-remote) or from Admin → Import old posts.");
+        }
         if ($stats['unmapped']) {
             $this->warn('Legacy category ids without a mapping (imported into "'.$defaultCategory->name.'"):');
             foreach ($stats['unmapped'] as $id => $count) {
@@ -187,6 +162,64 @@ class ImportVarientSqlCommand extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    private function importRow(array $row, int $legacyId, Category $category, User $author, HtmlSanitizer $sanitizer, ImageService $images, RemoteImageFetcher $fetcher, array &$stats, float $started): void
+    {
+
+        $title = trim(html_entity_decode((string) ($row['title'] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        if ($title === '') {
+            throw new \RuntimeException('Missing title');
+        }
+        $isPublished = (int) ($row['status'] ?? 1) === 1 && (int) ($row['visibility'] ?? 1) === 1;
+        $createdAt = $this->date($row['created_at'] ?? null) ?? now();
+        $image = $this->resolveImage($row, $images, $stats);
+        $video = $row['video_url'] ?: $this->videoFromEmbed($row['video_embed_code'] ?? null);
+        $type = match ($row['post_type'] ?? 'article') {
+            'video' => 'video', 'gallery' => 'gallery', 'audio' => 'audio', default => 'article',
+        };
+        if ($type === 'video' && ! EmbedRenderer::video($video)) {
+            $type = 'article';
+        }
+
+        $post = new Post([
+            'user_id' => $this->mapUser($row['user_id'] ?? null, $author),
+            'category_id' => $category->id,
+            'language' => setting('language', 'en'),
+            'post_type' => $type,
+            'video_url' => $type === 'video' ? $video : null,
+            'title' => Str::limit($title, 200, ''),
+            'slug' => $row['slug'] ?: Str::slug($title),
+            'excerpt' => Str::limit(trim(strip_tags(html_entity_decode($row['summary'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'))), 500, ''),
+            'content' => $sanitizer->clean($this->normalizeContent($row['content'] ?? '')),
+            'image' => $image,
+            'image_alt' => Str::limit(trim((string) ($row['image_description'] ?? '')), 200, '') ?: null,
+            'status' => $isPublished ? Post::STATUS_PUBLISHED : Post::STATUS_DRAFT,
+            'published_at' => $createdAt,
+            'meta_keywords' => Str::limit(trim((string) ($row['keywords'] ?? '')), 255, '') ?: null,
+            'source_url' => $row['optional_url'] ?: ($row['post_url'] ?: null),
+            'legacy_id' => $legacyId,
+        ]);
+        $post->created_at = $createdAt;
+        $post->updated_at = $this->date($row['updated_at'] ?? null) ?? $createdAt;
+        $post->save();
+        Post::withoutTimestamps(fn () => $post->forceFill(['views' => (int) ($row['pageviews'] ?? 0)])->saveQuietly());
+
+        // Keywords double as tags (first 6) so archives and related-post linking work.
+        $keywords = collect(explode(',', (string) ($row['keywords'] ?? '')))->map(fn ($k) => trim($k))->filter()->take(6)->implode(',');
+        if ($keywords) {
+            $post->tags()->sync(Tag::syncFromString($keywords));
+        }
+
+        $this->redirects($post, $row);
+
+        // Download the hot-linked image now while we have time; the rest is picked up by images:fetch-remote.
+        if ($this->option('download-images') && ImageService::isRemoteUrl($post->image) && microtime(true) - $started < 60) {
+            if ($fetcher->fetch($post)['ok']) {
+                $stats['images_downloaded']++;
+            }
+        }
+
     }
 
     /**
@@ -286,26 +319,6 @@ class ImportVarientSqlCommand extends Command
         if ($url === '') {
             return null;
         }
-        if ($this->option('download-images') && Str::startsWith($url, ['http://', 'https://'])) {
-            try {
-                $response = Http::timeout(20)->withHeaders(['User-Agent' => 'Mozilla/5.0 (compatible; ViralDoseImporter/1.0)'])->get($url);
-                $type = (string) $response->header('Content-Type');
-                if ($response->successful() && Str::startsWith($type, 'image/') && strlen($response->body()) > 1000) {
-                    $ext = match (true) {
-                        str_contains($type, 'png') => 'png', str_contains($type, 'webp') => 'webp', str_contains($type, 'gif') => 'gif', default => 'jpg',
-                    };
-                    $dir = 'uploads/imported/'.Carbon::parse($row['created_at'] ?? now())->format('Y/m');
-                    $name = Str::limit(Str::slug(pathinfo(parse_url($url, PHP_URL_PATH) ?: 'image', PATHINFO_FILENAME)), 50, '').'-'.Str::lower(Str::random(6)).'.'.$ext;
-                    Storage::disk(ImageService::LOCAL_DISK)->put("{$dir}/{$name}", $response->body());
-                    $images->generateVariants("{$dir}/{$name}");
-                    $stats['images_downloaded']++;
-
-                    return "{$dir}/{$name}";
-                }
-            } catch (\Throwable) {
-                // keep the remote URL
-            }
-        }
 
         return $url;
     }
@@ -331,6 +344,7 @@ class ImportVarientSqlCommand extends Command
         $html = preg_replace('/\s(data-start|data-end|data-col-size|dir)="[^"]*"/i', '', $html);
         $html = preg_replace('/\sstyle="[^"]*"/i', '', $html);
         $html = preg_replace('/<span>(.*?)<\/span>/is', '$1', $html);
+        $html = preg_replace('/<\/?div>\s*/i', '', $html);           // bare wrapper divs from copy-paste
         $html = preg_replace('/<p>(\s|&nbsp;|<br\s*\/?>)*<\/p>/i', '', $html);
         $html = str_replace(["\r\n", "\r"], "\n", $html);
 
