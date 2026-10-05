@@ -83,7 +83,8 @@
             <label class="label mt-4">Upload service-account JSON key</label>
             <input type="file" name="google_service_account" accept=".json,application/json" class="block w-full text-sm">
             @error('google_service_account')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
-            <ol class="mt-4 list-decimal space-y-1 pl-5 text-xs text-ink-700">
+            <p class="mt-4 text-xs"><a href="https://github.com/PranayReddy10/viraldose/blob/main/docs/google-setup.md" target="_blank" rel="noopener" class="font-semibold text-brand-600 underline">Detailed step-by-step guide (docs/google-setup.md) →</a></p>
+            <ol class="mt-2 list-decimal space-y-1 pl-5 text-xs text-ink-700">
                 <li>Google Cloud Console → create a project → enable <em>Search Console API</em>, <em>Web Search Indexing API</em> and <em>Google Analytics Data API</em>.</li>
                 <li>IAM → Service accounts → create one → Keys → add JSON key → upload it here.</li>
                 <li>Search Console → Settings → Users → add the service-account email as <strong>Owner</strong> (required for the Indexing API).</li>
