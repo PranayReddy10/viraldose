@@ -17,19 +17,30 @@ About 20 minutes. Do every step on a computer, logged in to the Facebook account
 3. Check: facebook.com → your Page → **Settings → Linked accounts → Instagram** shows @viraldose_news.
 
 ## 2. Create the Meta app
-4. https://developers.facebook.com → **My Apps → Create app**.
-   - Use case: **Other** → Next → App type: **Business** → Next.
-   - App name `ViralDose Publisher`, your email, Business portfolio: leave "No business portfolio" if you have none → **Create app**.
-5. In the app dashboard → **Add product** → **Instagram** → **Set up** → choose
-   **"API setup with Facebook login"** (not "Instagram login" – the site talks to graph.facebook.com).
-   You can leave the app in **Development** mode; you don't need App Review because you only post to your own account.
+4. https://developers.facebook.com → **My Apps → Create app** → name it (e.g. `viraldose`).
+   When asked for use cases, pick **Manage messaging & content on Instagram** and
+   **Manage everything on your Page** (Business type if asked). Create the app.
+5. Add the permissions the site needs (Meta only lets the Explorer grant permissions that are on the app):
+   - Left menu **Use cases** → *Manage messaging & content on Instagram* → **Customize** →
+     open **API setup with Facebook login** (not "with Instagram login" – the site talks to graph.facebook.com)
+     → under Permissions click **Add** next to `instagram_basic` and `instagram_content_publish`.
+   - **Use cases** → *Manage everything on your Page* → **Customize** → **Add** `pages_show_list`,
+     `pages_read_engagement` and `business_management`.
+   You can leave the app **Unpublished** (Development mode). App Review and "Publish" are not needed because
+   you only post to your own account and you are the app's admin (App roles).
 
 ## 3. Get the tokens (Graph API Explorer)
 6. Open https://developers.facebook.com/tools/explorer
-   1. Top right **Meta App** → select *ViralDose Publisher*.
+   1. Right panel **Meta App** → select the app you created in step 4 (e.g. *viraldose*). **Not** your personal
+      name or any other app – a token from another app cannot publish.
    2. **User or Page** → *Get User Access Token*.
-   3. **Permissions** → *Add a permission* → tick all of:
+   3. **Permissions** → remove anything else that is listed (e.g. `whatsapp_business_*`, click ✕) →
+      *Add a permission* → add all of:
       `instagram_basic`, `instagram_content_publish`, `pages_show_list`, `pages_read_engagement`, `business_management`.
+      If a permission is missing from the list, it is not on the app yet – go back to step 5.
+      (If the panel only offers **Configurations**: Facebook Login for Business → Configurations → Create
+      configuration → choose *User access token*, the five permissions and your Page + Instagram account →
+      then select that configuration in the Explorer.)
    4. Click **Generate Access Token**. A Facebook window opens:
       Continue → **select the ViralDose Page** → **select @viraldose_news** → allow all permissions → Save → Got it.
       The *Access Token* box now holds a short-lived **user** token (expires in ~1 hour).
@@ -75,6 +86,7 @@ About 20 minutes. Do every step on a computer, logged in to the Facebook account
 |---|---|
 | `"data": []` in step 6 | The Page wasn't ticked in the login window. Explorer → *Get User Access Token* again → in the window click **Edit previous settings / Choose what you allow** → tick the Page and Instagram account. |
 | No `instagram_business_account` in the answer | Instagram is still a personal account or not linked to *this* Page (steps 1–3), or the Instagram account wasn't ticked in the login window. |
+| Token debugger shows another app name, or `whatsapp_*` scopes | Wrong *Meta App* selected in the Explorer. Pick your viraldose app and redo step 6. |
 | Test: `(#10)` / `(#200) … permission` | `instagram_content_publish` or `instagram_basic` missing – regenerate the token with all five permissions (step 6.3), then redo 6.5–6.6. |
 | Test: `Error validating access token` / code 190 | Token expired or invalidated (Facebook password changed, app removed, or you pasted the short-lived/user token). Redo 6.2–6.6 and paste the **Page** token. |
 | Test: `Unsupported get request … does not exist` | The ID is the Facebook Page ID, not the Instagram business account ID. |
@@ -83,4 +95,4 @@ About 20 minutes. Do every step on a computer, logged in to the Facebook account
 | `Application request limit reached` / `(#9) … limit` | Too many API posts in 24 h; wait and try later. |
 
 Security: the token lets anyone post to your account. Paste it only into the admin; it is stored encrypted.
-If it leaks, Facebook → Settings → **Business integrations / Apps and websites** → remove *ViralDose Publisher*, then repeat step 6.
+If it leaks, Facebook → Settings → **Business integrations / Apps and websites** → remove the app, then repeat step 6.
