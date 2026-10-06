@@ -114,7 +114,10 @@ class SearchConsole
 
     public function submitSitemap(string $sitemapUrl): void
     {
+        // The API wants an empty body. Laravel's default JSON body would be "[]", which Google
+        // rejects with "Invalid JSON payload received … Root element must be a message".
         $r = $this->client->http(GoogleClient::SCOPE_WEBMASTERS)
+            ->withBody('', 'application/json')
             ->put('https://www.googleapis.com/webmasters/v3/sites/'.rawurlencode($this->siteUrl()).'/sitemaps/'.rawurlencode($sitemapUrl));
         $this->guard($r);
     }

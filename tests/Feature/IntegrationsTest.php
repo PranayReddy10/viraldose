@@ -177,6 +177,24 @@ XML;
         $this->actingAs($admin)->get('/admin')->assertOk()->assertSee('Impressions');
     }
 
+    public function test_sitemap_submission_sends_an_empty_body(): void
+    {
+        Storage::fake('local');
+        GoogleClient::storeKey($this->serviceAccountJson());
+        Http::fake([
+            'oauth2.googleapis.com/token' => Http::response(['access_token' => 'tok']),
+            'www.googleapis.com/webmasters/v3/sites/*/sitemaps/*' => Http::response('', 204),
+        ]);
+
+        $this->actingAs($this->admin())->post(route('admin.google.sitemaps'))
+            ->assertRedirect()->assertSessionHas('status')->assertSessionHasNoErrors();
+
+        Http::assertSent(fn ($r) => $r->method() === 'PUT' && str_contains($r->url(), '/sitemaps/') && str_contains($r->url(), rawurlencode(route('sitemap.index'))) && $r->body() === '');
+        Http::assertSent(fn ($r) => $r->method() === 'PUT' && str_contains($r->url(), rawurlencode(route('sitemap.news'))) && $r->body() === '');
+        Http::assertNotSent(fn ($r) => $r->method() === 'PUT' && $r->body() === '[]');
+        $this->assertDatabaseHas('indexing_logs', ['provider' => 'search_console', 'action' => 'sitemap', 'status' => 'ok']);
+    }
+
     public function test_seo_analyzer_scores_and_flags_thin_content(): void
     {
         $thin = $this->publishedPost(['content' => '<p>Short.</p>', 'image' => null, 'meta_keywords' => 'india']);
