@@ -91,7 +91,36 @@ class ReelController extends Controller
 
     private function fill(Reel $reel, Request $request): void
     {
-        $data = $request->validate([
+        // The YouTube and Instagram boxes have their own field names (one shared name let the
+        // hidden, empty Instagram box overwrite the YouTube link). Use the box for the chosen source.
+        $box = ['youtube' => 'youtube_url', 'instagram' => 'instagram_url'][$request->input('source_type')] ?? null;
+        if ($box && $request->filled($box)) {
+            $link = trim((string) $request->input($box));
+            if (! preg_match('#^https?://#i', $link)) {
+                $link = 'https://'.ltrim($link, '/'); // pasted without the scheme, e.g. "youtube.com/shorts/…"
+            }
+            $request->merge(['external_url' => $link]);
+        }
+        $errorField = $box ?? 'external_url';
+
+        try {
+            $data = $this->validateReel($request);
+        } catch (ValidationException $e) {
+            // Show link errors under the box the editor actually typed in.
+            $errors = $e->errors();
+            if ($errorField !== 'external_url' && isset($errors['external_url'])) {
+                $errors[$errorField] = str_replace(['external url', 'external_url'], $errorField === 'youtube_url' ? 'YouTube URL' : 'Instagram URL', $errors['external_url']);
+                unset($errors['external_url']);
+            }
+            throw ValidationException::withMessages($errors);
+        }
+
+        $this->applyReel($reel, $request, $data, $errorField);
+    }
+
+    private function validateReel(Request $request): array
+    {
+        return $request->validate([
             'title' => ['required', 'string', 'max:200'],
             'slug' => ['nullable', 'string', 'max:220'],
             'caption' => ['nullable', 'string', 'max:1000'],
@@ -101,6 +130,8 @@ class ReelController extends Controller
             'image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif,avif', 'max:8192'],
             'image_url' => ['nullable', 'url', 'max:500'],
             'external_url' => ['nullable', 'url', 'max:500', 'required_if:source_type,youtube,instagram'],
+            'youtube_url' => ['nullable', 'string', 'max:500'],
+            'instagram_url' => ['nullable', 'string', 'max:500'],
             'thumbnail' => ['nullable', 'image', 'max:4096'],
             'thumbnail_url' => ['nullable', 'url', 'max:500'],
             'post_id' => ['nullable', 'exists:posts,id'],
@@ -109,7 +140,10 @@ class ReelController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'published_at' => ['nullable', 'date'],
         ]);
+    }
 
+    private function applyReel(Reel $reel, Request $request, array $data, string $errorField): void
+    {
         if ($data['source_type'] === 'upload' && ! $request->hasFile('video') && ! $reel->video_path) {
             throw ValidationException::withMessages(['video' => 'Upload a video file.']);
         }
@@ -117,10 +151,10 @@ class ReelController extends Controller
             throw ValidationException::withMessages(['image' => 'Upload a photo or give its URL.']);
         }
         if ($data['source_type'] === 'youtube' && ! EmbedRenderer::youtubeId($data['external_url'] ?? '')) {
-            throw ValidationException::withMessages(['external_url' => 'That is not a YouTube video / Shorts URL.']);
+            throw ValidationException::withMessages([$errorField => 'That is not a YouTube video / Shorts link. Paste a link like https://youtube.com/shorts/abc123XYZ_0']);
         }
         if ($data['source_type'] === 'instagram' && ! EmbedRenderer::validUrl('instagram', $data['external_url'] ?? '')) {
-            throw ValidationException::withMessages(['external_url' => 'That is not an Instagram reel / post URL.']);
+            throw ValidationException::withMessages([$errorField => 'That is not an Instagram reel / post link. Paste a link like https://www.instagram.com/reel/ABC123/']);
         }
 
         if ($request->hasFile('video')) {

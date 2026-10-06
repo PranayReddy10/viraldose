@@ -28,10 +28,10 @@
             <x-admin.field label="Direct video URL" name="video_url" type="url" :value="$reel->source_type === 'url' ? $reel->video_path : ''" help="A public https://… .mp4 link (e.g. from DigitalOcean Spaces)." />
         </div>
         <div data-source="youtube" class="hidden">
-            <x-admin.field label="YouTube Shorts / video URL" name="external_url" type="url" :value="$reel->source_type === 'youtube' ? $reel->external_url : ''" help="Thumbnail is fetched from YouTube automatically." />
+            <x-admin.field label="YouTube Shorts / video URL" name="youtube_url" :value="old('youtube_url', $reel->source_type === 'youtube' ? $reel->external_url : '')" help="Paste a Shorts, watch or youtu.be link, e.g. https://youtube.com/shorts/abc123XYZ_0. The thumbnail is fetched from YouTube automatically." />
         </div>
         <div data-source="instagram" class="hidden">
-            <x-admin.field label="Instagram reel URL" name="external_url" type="url" :value="$reel->source_type === 'instagram' ? $reel->external_url : ''" help="https://www.instagram.com/reel/… — Instagram's embed is shown (upload a thumbnail for the home strip)." />
+            <x-admin.field label="Instagram reel URL" name="instagram_url" :value="old('instagram_url', $reel->source_type === 'instagram' ? $reel->external_url : '')" help="https://www.instagram.com/reel/… — Instagram's embed is shown (upload a thumbnail for the home strip)." />
         </div>
     </div>
     <div class="space-y-6">

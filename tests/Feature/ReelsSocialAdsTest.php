@@ -79,7 +79,7 @@ class ReelsSocialAdsTest extends TestCase
         $this->assertSame('Cabc123xyz', Reel::where('title', 'Insta one')->value('external_id'));
         $this->assertStringContainsString('instagram.com/reel/Cabc123xyz/embed', Reel::where('title', 'Insta one')->first()->embedUrl());
 
-        $this->actingAs($admin)->post('/admin/reels', ['title' => 'Bad', 'source_type' => 'youtube', 'external_url' => 'https://example.com/x'])->assertSessionHasErrors('external_url');
+        $this->actingAs($admin)->post('/admin/reels', ['title' => 'Bad', 'source_type' => 'youtube', 'external_url' => 'https://example.com/x'])->assertSessionHasErrors('youtube_url');
 
         $this->actingAs($admin)->post('/admin/reels', ['title' => 'Uploaded', 'source_type' => 'upload', 'video' => UploadedFile::fake()->create('clip.mp4', 2048, 'video/mp4'), 'thumbnail' => UploadedFile::fake()->image('t.jpg', 720, 1280), 'is_active' => 1])->assertRedirect();
         $up = Reel::where('title', 'Uploaded')->first();
@@ -93,6 +93,39 @@ class ReelsSocialAdsTest extends TestCase
         $this->actingAs($admin)->get(route('admin.reels.edit', $up))->assertOk();
         $this->actingAs($admin)->delete(route('admin.reels.destroy', $up))->assertRedirect();
         Storage::disk('public')->assertMissing($up->video_path);
+    }
+
+    public function test_reel_form_submits_youtube_and_instagram_links_like_a_browser(): void
+    {
+        $admin = $this->admin();
+        $html = $this->actingAs($admin)->get('/admin/reels/create')->assertOk()->getContent();
+        $this->assertSame(0, substr_count($html, 'name="external_url"'), 'one shared name lets the hidden box overwrite the other');
+        $this->assertSame(1, substr_count($html, 'name="youtube_url"'));
+        $this->assertSame(1, substr_count($html, 'name="instagram_url"'));
+
+        // A browser sends every box, including the hidden, empty ones.
+        $form = ['source_type' => 'youtube', 'video_url' => '', 'youtube_url' => '', 'instagram_url' => '', 'image_url' => '', 'thumbnail_url' => '', 'is_active' => 1];
+        $this->actingAs($admin)->post('/admin/reels', ['title' => 'Shorts one', 'youtube_url' => 'https://youtube.com/shorts/dQw4w9WgXcQ?si=AbC123xyz'] + $form)
+            ->assertRedirect('/admin/reels')->assertSessionHasNoErrors();
+        $this->assertSame('dQw4w9WgXcQ', Reel::where('title', 'Shorts one')->value('external_id'));
+
+        $this->actingAs($admin)->post('/admin/reels', ['title' => 'No scheme', 'youtube_url' => 'youtube.com/shorts/aBcDeFgHiJk'] + $form)->assertSessionHasNoErrors();
+        $noScheme = Reel::where('title', 'No scheme')->first();
+        $this->assertSame('https://youtube.com/shorts/aBcDeFgHiJk', $noScheme->external_url);
+        $this->assertSame('aBcDeFgHiJk', $noScheme->external_id);
+
+        $this->actingAs($admin)->post('/admin/reels', ['source_type' => 'instagram'] + ['title' => 'Insta two', 'instagram_url' => 'https://www.instagram.com/reel/Cxyz987abc/'] + $form)->assertSessionHasNoErrors();
+        $this->assertSame('Cxyz987abc', Reel::where('title', 'Insta two')->value('external_id'));
+
+        $this->actingAs($admin)->post('/admin/reels', ['title' => 'Empty'] + $form)->assertSessionHasErrors('youtube_url');
+        $this->actingAs($admin)->post('/admin/reels', ['title' => 'Wrong', 'youtube_url' => 'https://example.com/clip'] + $form)->assertSessionHasErrors('youtube_url');
+
+        // Editing keeps the link in the right box (flush the old input flashed by the failed requests above).
+        $this->flushSession();
+        $shorts = Reel::where('title', 'Shorts one')->first();
+        $this->actingAs($admin)->get(route('admin.reels.edit', $shorts))->assertOk()->assertSee('name="youtube_url" value="https://youtube.com/shorts/dQw4w9WgXcQ?si=AbC123xyz"', false);
+        $this->actingAs($admin)->put(route('admin.reels.update', $shorts), ['title' => 'Shorts one', 'youtube_url' => 'https://youtu.be/aBcDeFgHiJk'] + $form)->assertSessionHasNoErrors();
+        $this->assertSame('aBcDeFgHiJk', $shorts->fresh()->external_id);
     }
 
     public function test_create_reel_prefilled_from_video_post(): void
