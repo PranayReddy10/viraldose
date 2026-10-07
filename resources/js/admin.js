@@ -172,7 +172,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
             },
         });
-        quill.root.innerHTML = hidden.value;
+        // Tables must go through Quill's clipboard converter: setting innerHTML directly loses the row
+        // boundaries, so saving the post flattened every table into one long row.
+        if (/<table/i.test(hidden.value)) {
+            // Quill tables have no header cells – turn <th> into <td> so header rows keep their columns.
+            const html = hidden.value.replace(/<(\/?)th\b/gi, '<$1td');
+            quill.setContents(quill.clipboard.convert({ html }), 'silent');
+        } else {
+            quill.root.innerHTML = hidden.value;
+        }
         const sync = () => (hidden.value = quill.root.innerHTML);
         quill.on('text-change', sync);
         editorEl.closest('form').addEventListener('submit', sync);

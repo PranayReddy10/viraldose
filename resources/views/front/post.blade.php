@@ -7,7 +7,7 @@
     $shareText = urlencode($post->title);
     $inContentAds = \App\Models\Ad::forSlot('post_in_content');
     $embeds = app(\App\Services\EmbedRenderer::class);
-    $content = $embeds->render($post->content);
+    $content = \App\Support\ContentTables::prepare($embeds->render($post->content));
     $video = $post->video();
     if ($inContentAds->isNotEmpty()) {
         $adHtml = view('partials.ad', ['slot' => 'post_in_content'])->render();
