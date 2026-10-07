@@ -88,9 +88,7 @@
                 </div>
             </section>
         @endif
-        @if(setting('whatsapp_url'))
-            <a href="{{ setting('whatsapp_url') }}" target="_blank" rel="noopener" class="btn w-full bg-[#25d366] text-white">Follow {{ site_name() }} on WhatsApp</a>
-        @endif
+        @include('partials.follow', ['layout' => 'grid'])
         @include('partials.ad', ['slot' => 'sidebar_bottom'])
     </div>
 </aside>

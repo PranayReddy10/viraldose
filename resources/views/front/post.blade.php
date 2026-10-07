@@ -136,12 +136,7 @@
                 </p>
             @endif
 
-            @if(setting('whatsapp_url'))
-                <aside class="mt-8 flex flex-col gap-3 rounded-lg border border-green-200 bg-green-50 p-5 sm:flex-row sm:items-center sm:justify-between" aria-label="Follow on WhatsApp">
-                    <p class="text-sm text-green-800"><strong>Get top news on WhatsApp.</strong> Follow the {{ site_name() }} channel for breaking updates – free, no spam.</p>
-                    <a href="{{ setting('whatsapp_url') }}" target="_blank" rel="noopener" class="btn shrink-0 bg-[#25d366] text-white">Follow on WhatsApp</a>
-                </aside>
-            @endif
+            @include('partials.follow', ['layout' => 'banner'])
 
             @if($post->tags->isNotEmpty())
                 <ul class="mt-8 flex flex-wrap gap-2" aria-label="Tags">
