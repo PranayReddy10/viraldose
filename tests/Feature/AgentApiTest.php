@@ -9,6 +9,7 @@ use App\Models\Setting;
 use App\Models\Tag;
 use App\Services\InstagramPublisher;
 use App\Services\ShareCardGenerator;
+use App\Support\XShare;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -203,5 +204,23 @@ class AgentApiTest extends TestCase
             'category' => 'india', 'content' => $this->body(),
         ], ['Authorization' => "Bearer {$token}"])->assertCreated()->assertJsonPath('status', 'published');
         $this->assertTrue(Post::find($res->json('id'))->isPublished());
+    }
+
+    public function test_post_on_x_intent_link(): void
+    {
+        $category = Category::factory()->create(['name' => 'India', 'slug' => 'india']);
+        $post = Post::factory()->create(['category_id' => $category->id, 'title' => 'Indian Navy Launches Fleet Support Ship Surya in Visakhapatnam']);
+        $post->tags()->sync(Tag::syncFromString('Indian Navy, Visakhapatnam'));
+        $post = $post->fresh();
+
+        $text = XShare::text($post);
+        $this->assertStringStartsWith($post->seoTitle()."\n\n".$post->url(), $text);
+        $this->assertStringContainsString('#IndianNavy #Visakhapatnam', $text);
+        $this->assertLessThanOrEqual(280, mb_strlen($text) - mb_strlen($post->url()) + 23);
+        $this->assertStringStartsWith('https://x.com/intent/post?text=', XShare::url($post));
+
+        $admin = $this->admin();
+        $this->actingAs($admin)->get('/admin/posts')->assertOk()->assertSee('x.com/intent/post', false);
+        $this->actingAs($admin)->get("/admin/posts/{$post->id}/edit")->assertOk()->assertSee('Post on X');
     }
 }

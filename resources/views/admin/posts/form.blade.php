@@ -170,6 +170,20 @@
         </section>
         @endif
 
+        {{-- X (Twitter): free one-click share via the X composer --}}
+        @if($post->exists && $post->isPublished())
+        <section class="card p-5">
+            <h2 class="mb-1 flex items-center gap-2 text-lg font-bold"><svg class="h-5 w-5" viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#000"/><path d="M6 6l12 12M18 6L6 18" stroke="#fff" stroke-width="2"/></svg> X (Twitter)</h2>
+            <p class="mb-3 text-xs text-ink-500">Opens X with this text ready – press <strong>Post</strong> there. Edit the text first if you like.</p>
+            <textarea id="x-text" rows="5" class="input text-xs">{{ \App\Support\XShare::text($post) }}</textarea>
+            <div class="mt-3 flex flex-wrap gap-2">
+                <a href="{{ \App\Support\XShare::url($post) }}" target="_blank" rel="noopener" class="btn bg-black text-white !px-3 !py-1.5 text-xs"
+                   onclick="this.href='https://x.com/intent/post?text='+encodeURIComponent(document.getElementById('x-text').value)">Post on X</a>
+                <button type="button" class="btn-secondary !px-3 !py-1.5 text-xs" data-copy="#x-text">Copy text</button>
+            </div>
+        </section>
+        @endif
+
         {{-- Instagram --}}
         @if($post->exists)
         <section class="card p-5">

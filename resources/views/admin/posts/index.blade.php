@@ -53,6 +53,7 @@
                     @else
                         <a href="{{ $post->url() }}{{ $post->isPublished() ? '' : '?preview=1' }}" target="_blank" class="text-xs font-semibold text-ink-500 hover:underline">View</a>
                         <a href="{{ route('admin.posts.edit', $post) }}" class="ml-2 text-xs font-semibold text-brand-600 hover:underline">Edit</a>
+                        @if($post->isPublished())<a href="{{ \App\Support\XShare::url($post) }}" target="_blank" rel="noopener" class="ml-2 text-xs font-semibold text-ink-900 hover:underline" title="Post on X">𝕏 Post</a>@endif
                     @endif
                 </td>
             </tr>

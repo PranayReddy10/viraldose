@@ -35,7 +35,7 @@ class PostController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $posts = Post::query()->with(['category:id,name,slug', 'author:id,name'])
+        $posts = Post::query()->with(['category:id,name,slug', 'author:id,name', 'tags:id,name'])
             ->when(! $user->canManageAllPosts(), fn ($q) => $q->where('user_id', $user->id))
             ->when($request->filled('q'), fn ($q) => $q->search($request->q))
             ->when($request->filled('status'), function ($q) use ($request) {
