@@ -190,4 +190,17 @@ class PublicPagesTest extends TestCase
         $this->assertDatabaseHas('comments', ['post_id' => $post->id, 'status' => 'pending']);
         $this->get($post->url())->assertDontSee('Great article!');
     }
+
+    public function test_article_sidebar_shows_popular_in_category_and_latest_news(): void
+    {
+        $india = Category::factory()->create(['name' => 'India', 'slug' => 'india']);
+        $world = Category::factory()->create(['name' => 'World', 'slug' => 'world']);
+        $post = Post::factory()->create(['category_id' => $india->id, 'title' => 'The article being read']);
+        Post::factory()->create(['category_id' => $india->id, 'title' => 'Another India story here', 'published_at' => now()->subDays(40)]);
+        Post::factory()->create(['category_id' => $world->id, 'title' => 'Fresh world headline today', 'published_at' => now()->subMinutes(5)]);
+
+        $this->get($post->url())->assertOk()
+            ->assertSee('Popular in India')->assertSee('Another India story here')
+            ->assertSee('Latest News')->assertSee('Fresh world headline today');
+    }
 }

@@ -238,7 +238,7 @@
             @endif
         </article>
 
-        @include('partials.sidebar')
+        @include('partials.sidebar', ['currentPost' => $post])
     </div>
 </div>
 @endsection
