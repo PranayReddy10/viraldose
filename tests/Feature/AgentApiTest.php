@@ -6,7 +6,9 @@ use App\Models\Category;
 use App\Models\Post;
 use App\Models\Redirect;
 use App\Models\Setting;
+use App\Services\ShareCardGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AgentApiTest extends TestCase
@@ -116,5 +118,30 @@ class AgentApiTest extends TestCase
     public function test_google_indexing_api_ping_is_off_by_default(): void
     {
         $this->assertSame(0, (int) Setting::get('google_auto_index'));
+    }
+
+    public function test_agent_headline_cards_are_not_used_as_instagram_background(): void
+    {
+        $this->assertTrue(ShareCardGenerator::isTextCard('uploads/posts/2026/10/surya-launch-AbC123-card.jpg'));
+        $this->assertFalse(ShareCardGenerator::isTextCard('uploads/posts/2026/10/ship-photo-abc123.jpg'));
+
+        $legacy = new Post(['slug' => 'indias-first-indigenous-fleet-support-ship-surya', 'created_via' => 'agent']);
+        $this->assertTrue(ShareCardGenerator::isTextCard('uploads/posts/2026/10/indias-first-indigenous-fleet-support-ship-surya-XyZ12a.jpg', $legacy));
+        $this->assertFalse(ShareCardGenerator::isTextCard('uploads/posts/2026/10/navy-photo-abc123.jpg', $legacy));
+    }
+
+    public function test_share_card_renders_for_agent_post_without_photo_background(): void
+    {
+        Storage::fake('public');
+        $category = Category::factory()->create(['slug' => 'india', 'name' => 'India']);
+        $post = Post::factory()->create([
+            'category_id' => $category->id,
+            'title' => "India's First Indigenous Fleet Support Ship Surya Launched in Vizag",
+            'image' => 'uploads/posts/2026/10/surya-AbC123-card.jpg',
+            'created_via' => 'agent',
+        ]);
+
+        $file = app(ShareCardGenerator::class)->generate($post->load('category'));
+        $this->assertTrue(Storage::disk('public')->exists($file));
     }
 }

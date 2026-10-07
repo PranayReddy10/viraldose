@@ -171,7 +171,7 @@ class AgentController extends Controller
             throw ValidationException::withMessages(['image_base64' => 'Send a JPG, PNG or WebP image of at most 5 MB, base64-encoded.']);
         }
 
-        return $this->images->storeBytes('uploads/posts/'.date('Y/m').'/'.Str::limit($slug, 60, '').'-'.Str::random(6).'.'.$ext, $bytes);
+        return $this->images->storeBytes('uploads/posts/'.date('Y/m').'/'.Str::limit($slug, 60, '').'-'.Str::random(6).'-card.'.$ext, $bytes);
     }
 
     /** Keeps only links to this site (and relative links); other anchors become plain text. */
