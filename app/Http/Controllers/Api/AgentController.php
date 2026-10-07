@@ -9,6 +9,8 @@ use App\Models\Tag;
 use App\Models\User;
 use App\Services\HtmlSanitizer;
 use App\Services\ImageService;
+use App\Services\InstagramPublisher;
+use App\Services\SearchEnginePinger;
 use App\Services\SeoAnalyzer;
 use App\Support\AgentPlan;
 use Illuminate\Http\JsonResponse;
@@ -45,7 +47,7 @@ class AgentController extends Controller
         return response()->json([
             'site' => ['name' => site_name(), 'url' => url('/'), 'language' => setting('language', 'en')],
             'rules' => [
-                'status' => 'Every post is saved as a draft for editor review.',
+                'status' => setting('agent_auto_publish') ? 'Posts are PUBLISHED immediately (auto-publish is on).' : 'Every post is saved as a draft for editor review.',
                 'min_words' => self::MIN_WORDS,
                 'title' => '50-70 characters',
                 'meta_description' => '150-160 characters',
@@ -132,7 +134,9 @@ class AgentController extends Controller
             'image_alt' => $data['image_alt'] ?? null,
             'image_caption' => $data['image_caption'] ?? null,
             'language' => $data['language'] ?? setting('language', 'en'),
-            'status' => Post::STATUS_DRAFT,
+            // Admin → Content Agent → "Publish directly" switches drafts to live posts.
+            'status' => setting('agent_auto_publish') ? Post::STATUS_PUBLISHED : Post::STATUS_DRAFT,
+            'published_at' => setting('agent_auto_publish') ? now() : null,
             'allow_comments' => true,
             'created_via' => 'agent',
             'is_featured' => (bool) ($data['top'] ?? false),
@@ -146,6 +150,13 @@ class AgentController extends Controller
         $post->tags()->sync(Tag::syncFromString(implode(',', $data['tags'] ?? [])));
 
         $post->load('category', 'tags');
+        if ($post->isPublished()) {
+            try {
+                app(SearchEnginePinger::class)->notifyIfJustPublished($post, false);
+            } catch (\Throwable) {
+            }
+            app(InstagramPublisher::class)->autoShare($post);
+        }
         $seo = $this->seo->analyze($post);
 
         return response()->json([

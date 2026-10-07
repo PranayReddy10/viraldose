@@ -21,6 +21,7 @@ class AgentController extends Controller
     {
         return view('admin.agent', [
             'enabled' => (bool) setting('agent_enabled', 0),
+            'autoPublish' => (bool) setting('agent_auto_publish', 0),
             'hasToken' => (bool) setting('agent_token_hash'),
             'tokenCreatedAt' => setting('agent_token_created_at'),
             'authorId' => (int) setting('agent_user_id', 0),
@@ -41,6 +42,7 @@ class AgentController extends Controller
         ]);
         Setting::setMany([
             'agent_enabled' => $request->boolean('agent_enabled') ? 1 : 0,
+            'agent_auto_publish' => $request->boolean('agent_auto_publish') ? 1 : 0,
             'agent_user_id' => (int) ($data['agent_user_id'] ?? 0),
         ]);
 

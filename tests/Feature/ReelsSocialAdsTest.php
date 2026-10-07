@@ -371,4 +371,40 @@ class ReelsSocialAdsTest extends TestCase
         $this->actingAs($this->admin())->get('/admin/settings?tab=header')->assertOk()->assertSee('Header code');
         $this->actingAs($this->admin())->get('/admin/settings?tab=body')->assertOk()->assertSee('Before &lt;/body&gt;', false)->assertDontSee('&amp;lt;', false);
     }
+
+    public function test_bulk_publish_and_cron_auto_share_and_container_polling(): void
+    {
+        Storage::fake('public');
+        $this->connectInstagram();
+        Setting::setMany(['instagram_auto_share' => 1]);
+        app(InstagramPublisher::class)->pollDelay = 0;
+        $checks = 0;
+        Http::fake(function ($request) use (&$checks) {
+            $url = $request->url();
+            if (str_ends_with($url, '/media')) {
+                return Http::response(['id' => 'CONT9']);
+            }
+            if (str_contains($url, '/CONT9?')) {
+                return Http::response(['status_code' => ++$checks < 3 ? 'IN_PROGRESS' : 'FINISHED']);
+            }
+            if (str_ends_with($url, '/media_publish')) {
+                return Http::response(['id' => 'MED9']);
+            }
+
+            return Http::response(['permalink' => 'https://www.instagram.com/p/x/']);
+        });
+        $category = Category::factory()->create();
+
+        // Bulk publish from the posts list now auto-shares, and waits for the container to finish.
+        $draft = Post::factory()->draft()->create(['category_id' => $category->id]);
+        $this->actingAs($this->admin())->post('/admin/posts/bulk', ['action' => 'publish', 'ids' => [$draft->id]])->assertRedirect();
+        $share = SocialShare::where('post_id', $draft->id)->first();
+        $this->assertSame('published', $share->status);
+
+        // A post that went live without the editor (scheduled / agent) is picked up by the cron job, once.
+        $scheduled = Post::factory()->create(['category_id' => $category->id, 'published_at' => now()->subMinutes(5)]);
+        $this->artisan('social:process')->assertSuccessful();
+        $this->artisan('social:process')->assertSuccessful();
+        $this->assertSame(1, SocialShare::where('post_id', $scheduled->id)->count());
+    }
 }

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Post;
 use App\Models\Reel;
 use App\Models\SocialShare;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -99,6 +100,34 @@ class InstagramPublisher
         return Str::limit(trim($caption), 2200, '');
     }
 
+    /** Seconds to wait between "is the image container ready?" checks (0 in tests). */
+    public int $pollDelay = 2;
+
+    /**
+     * Auto-share a freshly published post when "Auto-share" is on. Safe to call from every
+     * publish path (editor, bulk publish, content agent, scheduled posts via cron): it skips
+     * posts that already have a pending/published Instagram share and uses a lock against races.
+     */
+    public function autoShare(Post $post): ?SocialShare
+    {
+        if (! setting('instagram_auto_share') || ! $this->isReady() || ! $post->isPublished() || $post->noindex) {
+            return null;
+        }
+        $lock = Cache::lock('instagram-autoshare-'.$post->id, 120);
+        if (! $lock->get()) {
+            return null;
+        }
+        try {
+            $exists = $post->socialShares()->where('network', 'instagram')->whereIn('status', ['processing', 'published'])->exists();
+
+            return $exists ? null : $this->shareImage($post->loadMissing('category', 'tags'));
+        } catch (\Throwable) {
+            return null;
+        } finally {
+            $lock->release();
+        }
+    }
+
     /**
      * One click: build the card (or use the given image URL) and publish it.
      */
@@ -167,7 +196,16 @@ class InstagramPublisher
         try {
             $creationId = $this->createContainer(['image_url' => $imageUrl, 'caption' => $caption]);
             $share->update(['creation_id' => $creationId]);
-            $this->publishContainer($share);
+            // Image containers usually finish within a few seconds; wait briefly instead of
+            // leaving the share "processing" until the cron job (or a manual check) picks it up.
+            for ($i = 0; $i < 6; $i++) {
+                if ($this->publishContainer($share)) {
+                    break;
+                }
+                if ($this->pollDelay > 0) {
+                    sleep($this->pollDelay);
+                }
+            }
         } catch (\Throwable $e) {
             $share->update(['status' => 'failed', 'response' => Str::limit($e->getMessage(), 2000)]);
         }

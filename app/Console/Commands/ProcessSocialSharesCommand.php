@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Post;
 use App\Models\SocialShare;
 use App\Services\InstagramPublisher;
 use Illuminate\Console\Command;
@@ -10,7 +11,7 @@ class ProcessSocialSharesCommand extends Command
 {
     protected $signature = 'social:process';
 
-    protected $description = 'Publish Instagram containers (reels) that have finished processing';
+    protected $description = 'Publish finished Instagram containers and auto-share newly published posts';
 
     public function handle(InstagramPublisher $instagram): int
     {
@@ -28,6 +29,15 @@ class ProcessSocialSharesCommand extends Command
                 $this->error("#{$share->id} failed: ".$e->getMessage());
             }
         }
+        // Auto-share posts that went live without passing through the editor (scheduled posts,
+        // content agent auto-publish). autoShare() skips anything already shared.
+        if (setting('instagram_auto_share')) {
+            Post::published()->where('published_at', '>=', now()->subHours(6))
+                ->whereDoesntHave('socialShares', fn ($q) => $q->where('network', 'instagram'))
+                ->orderBy('published_at')->limit(3)->get()
+                ->each(fn (Post $post) => $instagram->autoShare($post));
+        }
+
         SocialShare::where('status', 'processing')->where('created_at', '<', now()->subDay())->update(['status' => 'failed', 'response' => 'Timed out waiting for Instagram.']);
 
         return self::SUCCESS;

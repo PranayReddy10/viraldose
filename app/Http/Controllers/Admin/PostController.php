@@ -148,7 +148,7 @@ class PostController extends Controller
 
         foreach ($posts as $post) {
             match ($data['action']) {
-                'publish' => tap($post->forceFill(['status' => Post::STATUS_PUBLISHED, 'published_at' => $post->published_at ?? now()]))->save() && $this->pinger->notify($post),
+                'publish' => $this->bulkPublish($post),
                 'draft' => $post->forceFill(['status' => Post::STATUS_DRAFT])->save(),
                 'trash' => $post->delete(),
                 'feature' => $post->forceFill(['is_featured' => true])->save(),
@@ -158,6 +158,13 @@ class PostController extends Controller
         }
 
         return back()->with('status', count($posts).' post(s) updated.');
+    }
+
+    private function bulkPublish(Post $post): void
+    {
+        $wasPublished = $post->isPublished();
+        $post->forceFill(['status' => Post::STATUS_PUBLISHED, 'published_at' => $post->published_at ?? now()])->save();
+        $this->afterSave($post, $wasPublished);
     }
 
     public function pullContent(Request $request, Post $post, FeedImporter $importer)
@@ -296,14 +303,8 @@ class PostController extends Controller
         } catch (\Throwable) {
             // Never block saving on a search-engine API hiccup; the log has the details.
         }
-        if (! $wasPublished && $post->isPublished() && setting('instagram_auto_share')) {
-            try {
-                $instagram = app(InstagramPublisher::class);
-                if ($instagram->isReady() && ! $post->socialShares()->where('network', 'instagram')->where('status', 'published')->exists()) {
-                    $instagram->shareImage($post->fresh(['category']));
-                }
-            } catch (\Throwable) {
-            }
+        if (! $wasPublished && $post->isPublished()) {
+            app(InstagramPublisher::class)->autoShare($post->fresh(['category', 'tags']));
         }
     }
 }

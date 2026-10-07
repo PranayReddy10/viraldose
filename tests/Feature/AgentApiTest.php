@@ -191,4 +191,17 @@ class AgentApiTest extends TestCase
         $tags = app(InstagramPublisher::class)->hashtags($post->fresh());
         $this->assertSame('#IndianNavy #HindustanShipyard #Vizag #India #viraldose #news', $tags);
     }
+
+    public function test_agent_can_publish_directly_when_enabled(): void
+    {
+        $token = $this->token();
+        Category::factory()->create(['slug' => 'india']);
+        $this->actingAs($this->admin())->put('/admin/agent', ['agent_enabled' => 1, 'agent_auto_publish' => 1])->assertRedirect();
+
+        $res = $this->postJson('/api/agent/posts', [
+            'title' => 'This article goes live immediately without review',
+            'category' => 'india', 'content' => $this->body(),
+        ], ['Authorization' => "Bearer {$token}"])->assertCreated()->assertJsonPath('status', 'published');
+        $this->assertTrue(Post::find($res->json('id'))->isPublished());
+    }
 }

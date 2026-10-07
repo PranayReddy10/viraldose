@@ -4,7 +4,7 @@
 <div class="grid max-w-5xl gap-6 lg:grid-cols-2">
     <div class="card p-6">
         <h2 class="text-lg font-bold">Agent API</h2>
-        <p class="mt-1 text-sm text-ink-700">A scheduled Claude task writes articles and sends them here. Every article arrives as a <strong>draft</strong> – review it under Posts and press Publish.</p>
+        <p class="mt-1 text-sm text-ink-700">A scheduled Claude task writes articles and sends them here. Articles arrive as <strong>drafts</strong> to review under Posts – or go live immediately when “Publish directly” is on.</p>
 
         @if(session('agent_token'))
             <div class="mt-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800">
@@ -21,6 +21,7 @@
         <form method="post" action="{{ route('admin.agent.update') }}" class="mt-4">
             @csrf @method('PUT')
             <x-admin.checkbox label="Allow the agent to create draft posts" name="agent_enabled" :checked="$enabled" />
+            <x-admin.checkbox label="Publish directly (skip review)" name="agent_auto_publish" :checked="$autoPublish" help="Agent articles go live immediately, are sent to IndexNow and auto-shared to Instagram (if on). Leave off to review drafts first." />
             <x-admin.select label="Credit drafts to" name="agent_user_id" :value="$authorId" placeholder="First admin"
                 :options="$authors->mapWithKeys(fn ($u) => [$u->id => $u->name.' ('.$u->role.')'])->all()" />
             <button class="btn-primary">Save</button>
