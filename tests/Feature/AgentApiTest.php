@@ -128,6 +128,7 @@ class AgentApiTest extends TestCase
         $legacy = new Post(['slug' => 'indias-first-indigenous-fleet-support-ship-surya', 'created_via' => 'agent']);
         $this->assertTrue(ShareCardGenerator::isTextCard('uploads/posts/2026/10/indias-first-indigenous-fleet-support-ship-surya-XyZ12a.jpg', $legacy));
         $this->assertFalse(ShareCardGenerator::isTextCard('uploads/posts/2026/10/navy-photo-abc123.jpg', $legacy));
+        $this->assertFalse(ShareCardGenerator::isTextCard('uploads/posts/2026/10/indias-first-indigenous-fleet-support-ship-surya-XyZ12a-photo.jpg', $legacy));
     }
 
     public function test_share_card_renders_for_agent_post_without_photo_background(): void

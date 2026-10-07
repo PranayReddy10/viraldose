@@ -89,6 +89,8 @@ class AgentController extends Controller
             'image_base64' => ['nullable', 'string', 'max:7000000'],
             'image_alt' => ['nullable', 'string', 'max:200'],
             'image_caption' => ['nullable', 'string', 'max:300'],
+            // "photo" = a real, freely licensed photo (credit it in image_caption); "card" = generated headline card.
+            'image_kind' => ['nullable', 'in:photo,card'],
             'language' => ['nullable', 'string', 'max:10'],
         ]);
 
@@ -133,7 +135,7 @@ class AgentController extends Controller
         $post->user_id = $this->author()->id;
 
         if (! empty($data['image_base64'])) {
-            $post->image = $this->storeImage($data['image_base64'], $slug);
+            $post->image = $this->storeImage($data['image_base64'], $slug, $data['image_kind'] ?? 'card');
         }
         $post->save();
         $post->tags()->sync(Tag::syncFromString(implode(',', $data['tags'] ?? [])));
@@ -161,7 +163,7 @@ class AgentController extends Controller
             ?? User::where('is_active', true)->where('role', User::ROLE_ADMIN)->orderBy('id')->firstOrFail();
     }
 
-    private function storeImage(string $base64, string $slug): string
+    private function storeImage(string $base64, string $slug, string $kind = 'card'): string
     {
         $base64 = preg_replace('/^data:image\/[a-z+]+;base64,/i', '', trim($base64));
         $bytes = base64_decode($base64, true);
@@ -171,7 +173,7 @@ class AgentController extends Controller
             throw ValidationException::withMessages(['image_base64' => 'Send a JPG, PNG or WebP image of at most 5 MB, base64-encoded.']);
         }
 
-        return $this->images->storeBytes('uploads/posts/'.date('Y/m').'/'.Str::limit($slug, 60, '').'-'.Str::random(6).'-card.'.$ext, $bytes);
+        return $this->images->storeBytes('uploads/posts/'.date('Y/m').'/'.Str::limit($slug, 60, '').'-'.Str::random(6).'-'.($kind === 'photo' ? 'photo' : 'card').'.'.$ext, $bytes);
     }
 
     /** Keeps only links to this site (and relative links); other anchors become plain text. */

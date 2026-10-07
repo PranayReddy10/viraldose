@@ -43,7 +43,7 @@
         <p class="mt-1 text-ink-700">Header on every call: <code class="font-mono text-xs">Authorization: Bearer &lt;token&gt;</code></p>
         <ul class="mt-3 space-y-2">
             <li><code class="font-mono text-xs">GET {{ url('/api/agent/context') }}</code><br><span class="text-xs text-ink-500">Categories, the latest 100 headlines (for internal links) and drafts waiting for review.</span></li>
-            <li><code class="font-mono text-xs">POST {{ url('/api/agent/posts') }}</code><br><span class="text-xs text-ink-500">JSON: title, category (slug), content (HTML, 400+ words), excerpt, tags[], meta_title, meta_description, meta_keywords, image_base64, image_alt. Links to other websites are removed automatically.</span></li>
+            <li><code class="font-mono text-xs">POST {{ url('/api/agent/posts') }}</code><br><span class="text-xs text-ink-500">JSON: title, category (slug), content (HTML, 400+ words), excerpt, tags[], meta_title, meta_description, meta_keywords, image_base64, image_kind (photo|card), image_alt, image_caption (photo credit). Links to other websites are removed automatically.</span></li>
             <li><code class="font-mono text-xs">GET {{ url('/api/agent/posts') }}</code><br><span class="text-xs text-ink-500">Posts created by the agent and their status.</span></li>
         </ul>
     </div>

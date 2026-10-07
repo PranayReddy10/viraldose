@@ -132,6 +132,9 @@ class ShareCardGenerator
         if (preg_match('/-card\.(jpe?g|png|webp)$/i', $image)) {
             return true;
         }
+        if (preg_match('/-photo\.(jpe?g|png|webp)$/i', $image)) {
+            return false;
+        }
 
         // Agent images uploaded before the "-card" suffix existed: named after the post slug.
         return $post?->created_via === 'agent' && $post->slug
