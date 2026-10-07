@@ -174,13 +174,14 @@
         @if($post->exists && $post->isPublished())
         <section class="card p-5">
             <h2 class="mb-1 flex items-center gap-2 text-lg font-bold"><svg class="h-5 w-5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#25d366"/><path d="M8.5 7.5c.3-.6.6-.6.9-.6h.6c.2 0 .4 0 .6.5l.8 1.9c.1.2 0 .4-.1.6l-.5.6c-.1.1-.2.3 0 .5.6 1 1.4 1.8 2.4 2.4.2.1.4.1.5 0l.6-.7c.2-.2.4-.2.6-.1l1.8.9c.2.1.4.2.4.4 0 .5-.2 1.3-.9 1.7-.6.4-1.6.6-3.6-.3-2.5-1.1-4.1-3.6-4.2-3.8-.1-.2-1-1.3-1-2.5 0-1.2.6-1.8.9-2z" fill="#fff"/></svg> WhatsApp Channel</h2>
-            <p class="mb-3 text-xs text-ink-500">Copy the text, open your <strong>ViralDose channel</strong> in WhatsApp and paste &amp; send. The link shows the article image as a preview.</p>
+            <p class="mb-3 text-xs text-ink-500"><strong>Copy &amp; open channel</strong> copies the text and opens your channel – long-press the message box, <strong>Paste</strong>, send. (WhatsApp does not allow websites to pre-fill channel messages.) The link shows the article image as a preview.</p>
             <textarea id="wa-text" rows="6" class="input text-xs">{{ \App\Support\WhatsAppShare::text($post) }}</textarea>
             <div class="mt-3 flex flex-wrap gap-2">
                 <button type="button" class="btn bg-[#25d366] text-white !px-3 !py-1.5 text-xs" data-copy="#wa-text">Copy for WhatsApp</button>
                 <a href="{{ \App\Support\WhatsAppShare::url($post) }}" target="_blank" rel="noopener" class="btn-secondary !px-3 !py-1.5 text-xs"
                    onclick="this.href='https://wa.me/?text='+encodeURIComponent(document.getElementById('wa-text').value)">Open in WhatsApp</a>
-                @if(setting('whatsapp_url'))<a href="{{ setting('whatsapp_url') }}" target="_blank" rel="noopener" class="btn-secondary !px-3 !py-1.5 text-xs">Open channel</a>@endif
+                @if(setting('whatsapp_url'))<a href="{{ setting('whatsapp_url') }}" class="btn-secondary !px-3 !py-1.5 text-xs" onclick="return vdCopyAndOpen(document.getElementById('wa-text').value, this.href, this)">Copy &amp; open channel</a>@endif
+                <button type="button" class="btn-secondary !px-3 !py-1.5 text-xs" onclick="vdShare(document.getElementById('wa-text').value)">Share…</button>
             </div>
         </section>
         @endif
@@ -189,11 +190,11 @@
         @if($post->exists && $post->isPublished())
         <section class="card p-5">
             <h2 class="mb-1 flex items-center gap-2 text-lg font-bold"><svg class="h-5 w-5" viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#000"/><path d="M6 6l12 12M18 6L6 18" stroke="#fff" stroke-width="2"/></svg> X (Twitter)</h2>
-            <p class="mb-3 text-xs text-ink-500">Opens X with this text ready – press <strong>Post</strong> there. Edit the text first if you like.</p>
+            <p class="mb-3 text-xs text-ink-500">On a phone this opens the share menu – choose the <strong>X</strong> app and the post is ready. On a computer it opens x.com. Edit the text first if you like.</p>
             <textarea id="x-text" rows="5" class="input text-xs">{{ \App\Support\XShare::text($post) }}</textarea>
             <div class="mt-3 flex flex-wrap gap-2">
                 <a href="{{ \App\Support\XShare::url($post) }}" target="_blank" rel="noopener" class="btn bg-black text-white !px-3 !py-1.5 text-xs"
-                   onclick="this.href='https://x.com/intent/post?text='+encodeURIComponent(document.getElementById('x-text').value)">Post on X</a>
+                   onclick="return vdShareX(document.getElementById('x-text').value)">Post on X</a>
                 <button type="button" class="btn-secondary !px-3 !py-1.5 text-xs" data-copy="#x-text">Copy text</button>
             </div>
         </section>
@@ -330,4 +331,5 @@
     <form id="form-facebook" method="post" action="{{ route('admin.posts.share.facebook', $post) }}" class="hidden">@csrf</form>
     @foreach($shares as $share)<form id="form-share-check-{{ $share->id }}" method="post" action="{{ route('admin.shares.check', $share) }}" class="hidden">@csrf</form>@endforeach
 @endif
+@include('admin.posts._share-js')
 @endsection

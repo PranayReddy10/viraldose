@@ -53,7 +53,7 @@
                     @else
                         <a href="{{ $post->url() }}{{ $post->isPublished() ? '' : '?preview=1' }}" target="_blank" class="text-xs font-semibold text-ink-500 hover:underline">View</a>
                         <a href="{{ route('admin.posts.edit', $post) }}" class="ml-2 text-xs font-semibold text-brand-600 hover:underline">Edit</a>
-                        @if($post->isPublished())<a href="{{ \App\Support\XShare::url($post) }}" target="_blank" rel="noopener" class="ml-2 text-xs font-semibold text-ink-900 hover:underline" title="Post on X">𝕏 Post</a><button type="button" class="ml-2 text-xs font-semibold text-green-800 hover:underline" data-text="{{ \App\Support\WhatsAppShare::text($post) }}" onclick="navigator.clipboard.writeText(this.dataset.text);this.textContent='Copied!'" title="Copy text for the WhatsApp channel">WA Copy</button>@endif
+                        @if($post->isPublished())<a href="{{ \App\Support\XShare::url($post) }}" target="_blank" rel="noopener" class="ml-2 text-xs font-semibold text-ink-900 hover:underline" title="Post on X" data-text="{{ \App\Support\XShare::text($post) }}" onclick="return vdShareX(this.dataset.text)">𝕏 Post</a><button type="button" class="ml-2 text-xs font-semibold text-green-800 hover:underline" data-text="{{ \App\Support\WhatsAppShare::text($post) }}" onclick="@if(setting('whatsapp_url'))vdCopyAndOpen(this.dataset.text, @js(setting('whatsapp_url')), this)@else navigator.clipboard.writeText(this.dataset.text);this.textContent='Copied!'@endif" title="Copy the text and open the WhatsApp channel">WA Copy</button>@endif
                     @endif
                 </td>
             </tr>
@@ -71,4 +71,5 @@
     </div>
 @endif
 <div class="mt-4">{{ $posts->links() }}</div>
+@include('admin.posts._share-js')
 @endsection

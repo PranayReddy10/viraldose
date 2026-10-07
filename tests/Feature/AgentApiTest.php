@@ -242,5 +242,7 @@ class AgentApiTest extends TestCase
         $admin = $this->admin();
         $this->actingAs($admin)->get("/admin/posts/{$post->id}/edit")->assertOk()->assertSee('Copy for WhatsApp');
         $this->actingAs($admin)->get('/admin/posts')->assertOk()->assertSee('WA Copy');
+        $this->actingAs($admin)->get("/admin/posts/{$post->id}/edit")->assertOk()->assertSee('Copy &amp; open channel', false)->assertSee('vdCopyAndOpen', false);
+        $this->actingAs($admin)->get('/admin/posts')->assertOk()->assertSee('window.vdShareX', false);
     }
 }
