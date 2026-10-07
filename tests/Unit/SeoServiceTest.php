@@ -14,6 +14,11 @@ class SeoServiceTest extends TestCase
 
         $long = str_repeat('word ', 30);
         $this->assertLessThanOrEqual(72, strlen((new Seo)->title($long)->fullTitle()));
+
+        // A 50–70 character headline is kept whole instead of being cut to fit the site name.
+        $headline = 'Chamoli Earthquake: 4.9 Quake Jolts Uttarakhand, Felt in Delhi NCR';
+        $this->assertSame($headline, (new Seo)->title($headline)->fullTitle());
+        $this->assertStringEndsNotWith(' ', (new Seo)->title($long)->fullTitle());
     }
 
     public function test_description_is_truncated_to_160(): void

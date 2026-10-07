@@ -155,7 +155,19 @@ class Seo
             return $this->title;
         }
 
-        return Str::limit($this->title, 70 - strlen($site) - 3, '').' - '.$site;
+        // Append " - ViralDose" only when it fits; never cut the headline mid-word to make room
+        // (Google shows ~60–70 characters and rewrites titles that end in a broken word).
+        $suffixed = $this->title.' - '.$site;
+
+        if (mb_strlen($suffixed) <= 70) {
+            return $suffixed;
+        }
+        if (mb_strlen($this->title) <= 70) {
+            return $this->title;
+        }
+        $cut = mb_substr($this->title, 0, 70);
+
+        return rtrim(mb_substr($cut, 0, mb_strrpos($cut, ' ') ?: 70), ' ,:;-–|');
     }
 
     public function resolvedDescription(): string
