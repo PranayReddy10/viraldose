@@ -28,6 +28,27 @@ class FacebookPublisher
         return $this->pageId() !== '' && $this->instagram->token() !== '';
     }
 
+    /**
+     * Posting to a Page needs a *Page* access token. If a user token was saved (the error is
+     * "publish_actions … deprecated"), exchange it for the Page's own token: GET /{page}?fields=access_token.
+     * A Page token from a long-lived user token never expires; cached for a day.
+     */
+    public function pageToken(): string
+    {
+        $stored = $this->instagram->token();
+
+        return Cache::remember('facebook.page_token.'.md5($stored.$this->pageId()), 86400, function () use ($stored) {
+            try {
+                $r = Http::timeout(20)->get(InstagramPublisher::GRAPH.'/'.$this->pageId(), ['fields' => 'access_token', 'access_token' => $stored]);
+                $token = (string) $r->json('access_token');
+
+                return $r->successful() && $token !== '' ? $token : $stored;
+            } catch (\Throwable) {
+                return $stored;
+            }
+        });
+    }
+
     public function caption(Post $post): string
     {
         $excerpt = Str::limit(trim(preg_replace('/\s+/', ' ', strip_tags((string) ($post->excerpt ?: $post->seoDescription())))), 300);
@@ -48,10 +69,14 @@ class FacebookPublisher
                 'url' => ShareCardGenerator::url($card),
                 'caption' => $caption,
                 'published' => 'true',
-                'access_token' => $this->instagram->token(),
+                'access_token' => $this->pageToken(),
             ]);
             if (! $r->successful()) {
                 $msg = $r->json('error.error_user_msg') ?? $r->json('error.message') ?? $r->body();
+                if (str_contains($msg, 'publish_actions') || str_contains($msg, 'pages_manage_posts')) {
+                    $msg .= ' — The access token needs the pages_manage_posts permission: regenerate it in Graph API Explorer with pages_manage_posts ticked, then save the Viraldose Page token in Settings.';
+                    Cache::forget('facebook.page_token.'.md5($this->instagram->token().$this->pageId()));
+                }
                 throw new RuntimeException('Facebook API: '.$msg);
             }
             $postId = (string) ($r->json('post_id') ?: $r->json('id'));
@@ -87,7 +112,7 @@ class FacebookPublisher
     /** @return array{name: string|null, followers: int|null} */
     public function page(): array
     {
-        $r = Http::timeout(20)->get(InstagramPublisher::GRAPH.'/'.$this->pageId(), ['fields' => 'name,followers_count', 'access_token' => $this->instagram->token()]);
+        $r = Http::timeout(20)->get(InstagramPublisher::GRAPH.'/'.$this->pageId(), ['fields' => 'name,followers_count', 'access_token' => $this->pageToken()]);
         if (! $r->successful()) {
             throw new RuntimeException('Facebook API: '.($r->json('error.message') ?? $r->body()));
         }

@@ -415,6 +415,7 @@ class ReelsSocialAdsTest extends TestCase
         Setting::setMany(['facebook_page_id' => '1101904999669966']);
         Http::fake([
             'graph.facebook.com/*/1101904999669966/photos' => Http::response(['id' => 'PH1', 'post_id' => '1101904999669966_777']),
+            'graph.facebook.com/*/1101904999669966?*' => Http::response(['access_token' => 'PAGE_TOKEN', 'id' => '1101904999669966']),
         ]);
         $category = Category::factory()->create(['name' => 'India']);
         $post = Post::factory()->create(['category_id' => $category->id, 'title' => 'Facebook test story', 'excerpt' => 'Short summary.']);
@@ -424,7 +425,8 @@ class ReelsSocialAdsTest extends TestCase
         $this->assertSame('published', $share->status);
         $this->assertSame('https://www.facebook.com/1101904999669966_777', $share->permalink);
         $this->assertStringContainsString('👉 Read more: '.$post->url(), $share->caption);
-        Http::assertSent(fn ($req) => str_ends_with($req->url(), '/photos') && str_contains($req['url'], '/uploads/social/'));
+        // The saved (user) token is exchanged for the Page token before posting.
+        Http::assertSent(fn ($req) => str_ends_with($req->url(), '/photos') && str_contains($req['url'], '/uploads/social/') && $req['access_token'] === 'PAGE_TOKEN');
 
         // Auto-share on publish (editor) and once only.
         Setting::set('facebook_auto_share', 1);
