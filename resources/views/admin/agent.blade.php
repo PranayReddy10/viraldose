@@ -49,6 +49,34 @@
     </div>
 </div>
 
+<form method="post" action="{{ route('admin.agent.plan') }}" class="card mt-6 max-w-5xl p-6">
+    @csrf @method('PUT')
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-lg font-bold">Daily plan</h2>
+        <span class="text-sm text-ink-500">Today ({{ $progress['date'] }}): <strong>{{ $progress['remaining_total'] }}</strong> articles still to write</span>
+    </div>
+    <p class="mt-1 text-sm text-ink-700">The agent runs several times a day and keeps going until today's plan is complete. <strong>Top news</strong> = the biggest stories of the day in any category (saved as featured). Category numbers are extra articles for that category. Quality beats volume for Google – start small and raise it once posts get indexed.</p>
+
+    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+        <x-admin.field label="Top news per day (any category)" name="agent_top_news" type="number" :value="$topNews" help="Done today: {{ $progress['top_news']['created_today'] }} of {{ $progress['top_news']['target'] }}" />
+        <x-admin.field label="Max articles per run" name="agent_max_per_run" type="number" :value="$maxPerRun" help="The task runs 3× a day; each run writes at most this many." />
+    </div>
+
+    <h3 class="mt-2 text-sm font-bold">Articles per category per day</h3>
+    @php $done = collect($progress['categories'])->keyBy('slug'); @endphp
+    <div class="mt-2 grid gap-2 sm:grid-cols-3">
+        @foreach($categories as $category)
+            <label class="flex items-center justify-between gap-2 rounded border border-ink-300/60 px-3 py-2 text-sm">
+                <span>{{ $category->name }}
+                    @if(isset($done[$category->slug]))<span class="block text-xs text-ink-500">today {{ $done[$category->slug]['created_today'] }}/{{ $done[$category->slug]['target'] }}</span>@endif
+                </span>
+                <input type="number" min="0" max="10" name="quotas[{{ $category->id }}]" value="{{ old('quotas.'.$category->id, $quotas[$category->id] ?? 0) }}" class="input" style="width:5rem">
+            </label>
+        @endforeach
+    </div>
+    <button class="btn-primary mt-4">Save plan</button>
+</form>
+
 <div class="card mt-6 max-w-5xl overflow-x-auto">
     <table class="table-admin">
         <thead><tr><th>Agent posts</th><th>Category</th><th>Status</th><th>Created</th><th></th></tr></thead>

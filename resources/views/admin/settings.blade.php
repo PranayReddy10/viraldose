@@ -155,7 +155,7 @@
         <div class="card p-6">
             <h2 class="mb-3 font-bold">Posting defaults</h2>
             <x-admin.checkbox label="Automatically post every newly published story to Instagram" name="instagram_auto_share" :checked="(bool) $s('instagram_auto_share')" help="Uses the generated news card. Otherwise editors click “Post to Instagram” on each story." />
-            <x-admin.field label="Caption template" name="instagram_caption_template" type="textarea" :rows="6" :value="str_replace('\\n', PHP_EOL, $s('instagram_caption_template'))" help="Placeholders: {title} {excerpt} {category} {url} {hashtags}. Instagram does not make links clickable – keep “link in bio”." />
+            <x-admin.field label="Caption template" name="instagram_caption_template" type="textarea" :rows="6" :value="str_replace('\\n', PHP_EOL, $s('instagram_caption_template'))" help="Placeholders: {title} {excerpt} {category} {url} {hashtags} – {hashtags} = the post's tags and category as hashtags, then the default hashtags below. Instagram does not make links clickable – keep “link in bio”." />
             <x-admin.field label="Default hashtags" name="instagram_hashtags" :value="$s('instagram_hashtags')" />
             <p class="text-xs text-ink-500">Card format: 1080×1350 JPEG with the featured image, category badge, headline and site name. Preview/download it from any post's Instagram box.</p>
         </div>

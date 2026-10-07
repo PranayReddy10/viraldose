@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\HtmlSanitizer;
 use App\Services\ImageService;
 use App\Services\SeoAnalyzer;
+use App\Support\AgentPlan;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -50,6 +51,7 @@ class AgentController extends Controller
                 'meta_description' => '150-160 characters',
                 'links' => 'Only links to '.parse_url(url('/'), PHP_URL_HOST).' are kept; other links are removed.',
             ],
+            'plan' => AgentPlan::progress(),
             'categories' => $categories,
             'recent_posts' => $recent,
             'pending_drafts' => $drafts,
@@ -92,6 +94,8 @@ class AgentController extends Controller
             // "photo" = a real, freely licensed photo (credit it in image_caption); "card" = generated headline card.
             'image_kind' => ['nullable', 'in:photo,card'],
             'language' => ['nullable', 'string', 'max:10'],
+            // true = one of the day's top stories (any category); saved as a featured draft.
+            'top' => ['nullable', 'boolean'],
         ]);
 
         $category = Category::active()
@@ -131,6 +135,7 @@ class AgentController extends Controller
             'status' => Post::STATUS_DRAFT,
             'allow_comments' => true,
             'created_via' => 'agent',
+            'is_featured' => (bool) ($data['top'] ?? false),
         ]);
         $post->user_id = $this->author()->id;
 
@@ -151,6 +156,7 @@ class AgentController extends Controller
             'words' => $words,
             'edit_url' => route('admin.posts.edit', $post),
             'future_url' => $post->url(),
+            'plan' => AgentPlan::progress(),
             'seo' => ['score' => $seo['score'], 'grade' => $seo['grade'], 'issues' => collect($seo['checks'])->where('status', '!=', 'pass')->values()],
         ], 201);
     }

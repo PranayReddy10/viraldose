@@ -323,9 +323,9 @@ class ReelsSocialAdsTest extends TestCase
         $this->actingAs($this->admin())->post('/admin/posts', ['title' => 'Auto shared', 'category_id' => $category->id, 'status' => 'published', 'save_as' => 'publish'])->assertRedirect();
         $share = SocialShare::first();
         $this->assertNotNull($share);
-        $this->assertSame('Auto shared | Sports #vd', $share->caption);
+        $this->assertSame('Auto shared | Sports #Sports #vd', $share->caption);
 
-        $this->assertSame('Auto shared | Sports #vd', app(InstagramPublisher::class)->caption(Post::first()));
+        $this->assertSame('Auto shared | Sports #Sports #vd', app(InstagramPublisher::class)->caption(Post::first()));
     }
 
     public function test_instagram_settings_and_connection_test(): void

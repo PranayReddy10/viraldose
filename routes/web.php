@@ -113,6 +113,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::resource('redirects', Admin\RedirectController::class)->only(['index', 'store', 'destroy']);
             Route::get('agent', [Admin\AgentController::class, 'show'])->name('agent.show');
             Route::put('agent', [Admin\AgentController::class, 'update'])->name('agent.update');
+            Route::put('agent/plan', [Admin\AgentController::class, 'plan'])->name('agent.plan');
             Route::post('agent/token', [Admin\AgentController::class, 'token'])->name('agent.token');
             Route::delete('agent/token', [Admin\AgentController::class, 'revoke'])->name('agent.revoke');
             Route::get('settings', [Admin\SettingController::class, 'edit'])->name('settings.edit');

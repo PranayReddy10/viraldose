@@ -6,6 +6,8 @@ use App\Models\Category;
 use App\Models\Post;
 use App\Models\Redirect;
 use App\Models\Setting;
+use App\Models\Tag;
+use App\Services\InstagramPublisher;
 use App\Services\ShareCardGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -144,5 +146,49 @@ class AgentApiTest extends TestCase
 
         $file = app(ShareCardGenerator::class)->generate($post->load('category'));
         $this->assertTrue(Storage::disk('public')->exists($file));
+    }
+
+    public function test_daily_plan_tracks_top_news_and_category_quotas(): void
+    {
+        $token = $this->token();
+        $india = Category::factory()->create(['slug' => 'india', 'name' => 'India']);
+        $cricket = Category::factory()->create(['slug' => 'cricket', 'name' => 'Cricket']);
+
+        $this->actingAs($this->admin())->put('/admin/agent/plan', [
+            'agent_top_news' => 2, 'agent_max_per_run' => 4, 'quotas' => [$india->id => 3, $cricket->id => 0],
+        ])->assertRedirect();
+
+        $plan = $this->getJson('/api/agent/context', ['Authorization' => "Bearer {$token}"])->assertOk()->json('plan');
+        $this->assertSame(2, $plan['top_news']['remaining']);
+        $this->assertSame(4, $plan['max_per_run']);
+        $this->assertCount(1, $plan['categories']);
+        $this->assertSame(5, $plan['remaining_total']);
+
+        $res = $this->postJson('/api/agent/posts', [
+            'title' => 'Top story of the day goes to the featured section now',
+            'category' => 'cricket', 'content' => $this->body(), 'top' => true,
+        ], ['Authorization' => "Bearer {$token}"])->assertCreated();
+        $this->assertTrue(Post::find($res->json('id'))->is_featured);
+        $this->assertSame(1, $res->json('plan.top_news.remaining'));
+
+        $res = $this->postJson('/api/agent/posts', [
+            'title' => 'An India category story that counts towards its quota',
+            'category' => 'india', 'content' => $this->body(),
+        ], ['Authorization' => "Bearer {$token}"])->assertCreated();
+        $this->assertSame(2, $res->json('plan.categories.0.remaining'));
+        $this->assertSame(3, $res->json('plan.remaining_total'));
+
+        $this->actingAs($this->admin())->get('/admin/agent')->assertOk()->assertSee('Daily plan');
+    }
+
+    public function test_instagram_hashtags_come_from_post_tags_and_category(): void
+    {
+        Setting::set('instagram_hashtags', '#viraldose #news #india');
+        $category = Category::factory()->create(['name' => 'India']);
+        $post = Post::factory()->create(['category_id' => $category->id]);
+        $post->tags()->sync(Tag::syncFromString('Indian Navy, Hindustan Shipyard, Vizag'));
+
+        $tags = app(InstagramPublisher::class)->hashtags($post->fresh());
+        $this->assertSame('#IndianNavy #HindustanShipyard #Vizag #India #viraldose #news', $tags);
     }
 }

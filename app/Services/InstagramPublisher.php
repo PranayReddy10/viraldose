@@ -55,6 +55,32 @@ class InstagramPublisher
         return ['username' => $r->json('username'), 'followers' => $r->json('followers_count'), 'picture' => $r->json('profile_picture_url')];
     }
 
+    /**
+     * Post tags + category as hashtags (#HyderabadMetro), then the default hashtags from Settings.
+     * Deduplicated case-insensitively and capped at Instagram's limit of 30.
+     */
+    public function hashtags(Post|Reel $subject): string
+    {
+        $post = $subject instanceof Post ? $subject : $subject->post;
+        $words = [];
+        if ($post) {
+            $post->loadMissing('tags', 'category');
+            $words = $post->tags->pluck('name')->all();
+            if ($post->category) {
+                $words[] = $post->category->name;
+            }
+        }
+        $tags = collect($words)
+            ->map(fn ($w) => '#'.implode('', array_map(fn ($part) => Str::ucfirst($part), preg_split('/[^\p{L}\p{N}]+/u', (string) $w, -1, PREG_SPLIT_NO_EMPTY))))
+            ->merge(preg_split('/\s+/', trim((string) setting('instagram_hashtags')), -1, PREG_SPLIT_NO_EMPTY))
+            ->filter(fn ($t) => mb_strlen($t) > 2 && ! preg_match('/^#\d+$/', $t))
+            ->map(fn ($t) => str_starts_with($t, '#') ? $t : '#'.$t)
+            ->unique(fn ($t) => mb_strtolower($t))
+            ->take(30);
+
+        return $tags->implode(' ');
+    }
+
     public function caption(Post|Reel $subject, ?string $override = null): string
     {
         if ($override !== null && trim($override) !== '') {
@@ -66,7 +92,7 @@ class InstagramPublisher
             '{excerpt}' => (string) ($subject instanceof Post ? $subject->excerpt : $subject->caption),
             '{category}' => (string) $subject->category?->name,
             '{url}' => $subject->url(),
-            '{hashtags}' => (string) setting('instagram_hashtags'),
+            '{hashtags}' => $this->hashtags($subject),
             '\n' => "\n",
         ]);
 

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Post;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\AgentPlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -23,6 +25,11 @@ class AgentController extends Controller
             'tokenCreatedAt' => setting('agent_token_created_at'),
             'authorId' => (int) setting('agent_user_id', 0),
             'authors' => User::where('is_active', true)->orderBy('name')->get(['id', 'name', 'role']),
+            'categories' => Category::active()->ordered()->get(['id', 'name', 'slug']),
+            'quotas' => AgentPlan::quotas(),
+            'topNews' => AgentPlan::topNews(),
+            'maxPerRun' => AgentPlan::maxPerRun(),
+            'progress' => AgentPlan::progress(),
             'drafts' => Post::where('created_via', 'agent')->with('category')->orderByDesc('id')->limit(15)->get(),
         ]);
     }
@@ -38,6 +45,27 @@ class AgentController extends Controller
         ]);
 
         return back()->with('status', 'Content agent settings saved.');
+    }
+
+    public function plan(Request $request)
+    {
+        $data = $request->validate([
+            'agent_top_news' => ['required', 'integer', 'min:0', 'max:20'],
+            'agent_max_per_run' => ['required', 'integer', 'min:1', 'max:10'],
+            'quotas' => ['nullable', 'array'],
+            'quotas.*' => ['nullable', 'integer', 'min:0', 'max:10'],
+        ]);
+        $valid = Category::pluck('id')->all();
+        $quotas = collect($data['quotas'] ?? [])->filter(fn ($n, $id) => in_array((int) $id, $valid, true) && (int) $n > 0)
+            ->mapWithKeys(fn ($n, $id) => [(int) $id => (int) $n])->all();
+
+        Setting::setMany([
+            'agent_top_news' => (int) $data['agent_top_news'],
+            'agent_max_per_run' => (int) $data['agent_max_per_run'],
+            'agent_category_quotas' => json_encode((object) $quotas),
+        ]);
+
+        return back()->with('status', 'Daily plan saved.');
     }
 
     public function token()
