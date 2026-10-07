@@ -72,6 +72,7 @@ class FeedImporter
                 'source_name' => $feed->name,
                 'source_url' => $item['link'],
                 'rss_feed_id' => $feed->id,
+                'created_via' => 'feed',
                 'feed_guid' => Str::limit($item['guid'], 500, ''),
             ]);
             if ($item['tags']) {

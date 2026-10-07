@@ -44,6 +44,7 @@
                 ['Google Search & Analytics', 'admin.google.index', 'admin/google*', 'google', ['admin', 'editor']],
                 ['Instagram', 'admin.settings.edit', 'admin/settings?tab=instagram', 'instagram', ['admin'], ['tab' => 'instagram']],
                 ['Ad Spaces', 'admin.ads.index', 'admin/ads*', 'ads', ['admin']],
+                ['Content Agent', 'admin.agent.show', 'admin/agent*', 'robot', ['admin']],
                 ['Redirects', 'admin.redirects.index', 'admin/redirects*', 'redirect', ['admin']],
                 ['Newsletter', 'admin.subscribers.index', 'admin/subscribers*', 'mail', ['admin']],
                 ['Contact Messages', 'admin.messages.index', 'admin/messages*', 'inbox', ['admin']],

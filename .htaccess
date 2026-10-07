@@ -9,6 +9,10 @@
     RewriteEngine On
     RewriteBase /
 
+    # Pass the Authorization header through (needed by the content agent API's Bearer token)
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
     # Never serve application internals or secrets
     RewriteRule ^(\.env.*|\.git.*|\.htaccess|composer\.(json|lock)|package(-lock)?\.json|artisan|phpunit\.xml|vite\.config\.js|CLAUDE\.md|README\.md|\.editorconfig|\.gitattributes|\.gitignore|\.npmrc)$ - [F,L]
     # (/storage/... is NOT blocked: it maps to public/storage, the symlink to

@@ -72,7 +72,7 @@ class Setting extends Model
             // Google & indexing
             'google_sc_site_url' => '',
             'ga4_property_id' => '',
-            'google_auto_index' => 1,
+            'google_auto_index' => 0,
             'indexnow_enabled' => 1,
             'indexnow_key' => '',
             // Code injection

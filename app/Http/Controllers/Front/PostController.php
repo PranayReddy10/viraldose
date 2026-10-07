@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\PostFile;
+use App\Models\Redirect;
 use App\Services\Seo;
 use App\Support\PostUrl;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class PostController extends Controller
     {
         $post = $this->findPublished($slug, $request);
         if (! $post) {
-            abort(404);
+            $this->abortMissing($request, $slug);
         }
         // Enforce the canonical URL form (category mismatch or flat format configured).
         if (PostUrl::path($post) !== '/'.$category.'/'.$slug) {
@@ -43,7 +44,7 @@ class PostController extends Controller
 
         $post = $this->findPublished($slug, $request);
         if (! $post) {
-            abort(404);
+            $this->abortMissing($request, $slug);
         }
         if (PostUrl::path($post) !== '/'.$slug) {
             return redirect($post->url(), 301);
@@ -58,6 +59,21 @@ class PostController extends Controller
         PostFile::withoutTimestamps(fn () => $file->increment('downloads'));
 
         return redirect()->away($file->url());
+    }
+
+    /**
+     * A post that was deleted (trash) or archived answers 410 Gone so Google drops
+     * it quickly; everything else is a plain 404. A redirect entry always wins.
+     */
+    private function abortMissing(Request $request, string $slug): never
+    {
+        $gone = Post::withTrashed()->where('slug', $slug)
+            ->where(fn ($q) => $q->whereNotNull('deleted_at')->orWhere('status', Post::STATUS_ARCHIVED))
+            ->exists();
+        if ($gone && ! Redirect::findForPath($request->getPathInfo())) {
+            abort(410);
+        }
+        abort(404);
     }
 
     private function findPublished(string $slug, Request $request): ?Post

@@ -96,7 +96,7 @@
             </div>
             <div class="card p-6">
                 <h2 class="mb-3 font-bold">Automatic indexing</h2>
-                <x-admin.checkbox label="Submit to Google Indexing API when a post is published or updated" name="google_auto_index" :checked="(bool) $s('google_auto_index')" help="Quota: 200 URLs/day per project." />
+                <x-admin.checkbox label="Submit to Google Indexing API when a post is published or updated" name="google_auto_index" :checked="(bool) $s('google_auto_index')" help="Not recommended for news: Google only honours the Indexing API for job-posting and livestream pages. Use IndexNow + the sitemap instead." />
                 <x-admin.checkbox label="Submit to IndexNow (Bing, Yandex, Seznam, Naver)" name="indexnow_enabled" :checked="(bool) $s('indexnow_enabled')" />
                 <p class="mt-2 text-xs text-ink-500">IndexNow key file: <a href="{{ url('/'.$indexNowKey.'.txt') }}" target="_blank" class="underline">/{{ $indexNowKey }}.txt</a> (served automatically).</p>
                 <a href="{{ route('admin.google.index') }}" class="btn-outline mt-4">Open Google dashboard →</a>

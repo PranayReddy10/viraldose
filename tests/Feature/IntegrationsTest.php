@@ -105,6 +105,7 @@ XML;
     {
         Storage::fake('local');
         GoogleClient::storeKey($this->serviceAccountJson());
+        Setting::set('google_auto_index', 1); // off by default since the Indexing API ignores news pages
         Http::fake([
             'oauth2.googleapis.com/token' => Http::response(['access_token' => 'tok', 'expires_in' => 3600]),
             'indexing.googleapis.com/*' => Http::response(['urlNotificationMetadata' => ['url' => 'x']]),

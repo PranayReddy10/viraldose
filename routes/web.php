@@ -111,6 +111,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::resource('ads', Admin\AdController::class)->except(['show']);
             Route::post('redirects/import', [Admin\RedirectController::class, 'import'])->name('redirects.import');
             Route::resource('redirects', Admin\RedirectController::class)->only(['index', 'store', 'destroy']);
+            Route::get('agent', [Admin\AgentController::class, 'show'])->name('agent.show');
+            Route::put('agent', [Admin\AgentController::class, 'update'])->name('agent.update');
+            Route::post('agent/token', [Admin\AgentController::class, 'token'])->name('agent.token');
+            Route::delete('agent/token', [Admin\AgentController::class, 'revoke'])->name('agent.revoke');
             Route::get('settings', [Admin\SettingController::class, 'edit'])->name('settings.edit');
             Route::put('settings', [Admin\SettingController::class, 'update'])->name('settings.update');
             // The test buttons live inside the settings form, which carries _method=PUT – accept both.
