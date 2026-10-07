@@ -9,6 +9,7 @@ use App\Models\Setting;
 use App\Models\Tag;
 use App\Services\InstagramPublisher;
 use App\Services\ShareCardGenerator;
+use App\Support\WhatsAppShare;
 use App\Support\XShare;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -222,5 +223,23 @@ class AgentApiTest extends TestCase
         $admin = $this->admin();
         $this->actingAs($admin)->get('/admin/posts')->assertOk()->assertSee('x.com/intent/post', false);
         $this->actingAs($admin)->get("/admin/posts/{$post->id}/edit")->assertOk()->assertSee('Post on X');
+    }
+
+    public function test_whatsapp_channel_text_and_follow_banner(): void
+    {
+        $category = Category::factory()->create(['slug' => 'india']);
+        $post = Post::factory()->create(['category_id' => $category->id, 'title' => 'Surya Launched in Vizag', 'excerpt' => 'The Navy got a new ship.']);
+
+        $text = WhatsAppShare::text($post);
+        $this->assertStringStartsWith("*Surya Launched in Vizag*\n\nThe Navy got a new ship.", $text);
+        $this->assertStringEndsWith($post->url(), $text);
+
+        $this->get($post->url())->assertOk()->assertDontSee('Follow on WhatsApp');
+        Setting::set('whatsapp_url', 'https://whatsapp.com/channel/ABC123');
+        $this->get($post->url())->assertOk()->assertSee('Follow on WhatsApp')->assertSee('whatsapp.com/channel/ABC123', false);
+
+        $admin = $this->admin();
+        $this->actingAs($admin)->get("/admin/posts/{$post->id}/edit")->assertOk()->assertSee('Copy for WhatsApp');
+        $this->actingAs($admin)->get('/admin/posts')->assertOk()->assertSee('WA Copy');
     }
 }
