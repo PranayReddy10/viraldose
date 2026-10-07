@@ -222,12 +222,23 @@
                 <a href="{{ route('admin.posts.share.card', $post) }}" class="btn-secondary !px-3 !py-1.5 text-xs">Download card</a>
                 <button type="button" class="btn-secondary !px-3 !py-1.5 text-xs" data-copy="#ig-caption">Copy caption</button>
             </div>
+            @php $facebook = app(\App\Services\FacebookPublisher::class); @endphp
+            <div class="mt-4 border-t border-ink-100 pt-3">
+                <h3 class="flex items-center gap-2 text-sm font-bold"><svg class="h-4 w-4" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#1877f2"/><path d="M13.2 19v-6h2l.3-2.4h-2.3V9.1c0-.7.2-1.2 1.2-1.2h1.2V5.8c-.2 0-1-.1-1.8-.1-1.8 0-3 1.1-3 3.1v1.8h-2V13h2v6z" fill="#fff"/></svg> Facebook Page</h3>
+                @if($facebook->isReady())
+                    <textarea name="fb_caption" form="form-facebook" rows="4" class="input mt-2 text-xs">{{ $facebook->caption($post) }}</textarea>
+                    <button type="submit" form="form-facebook" class="btn mt-2 bg-[#1877f2] text-white !px-3 !py-1.5 text-xs" @disabled(! $post->isPublished())>Post card to Facebook</button>
+                    @unless($post->isPublished())<p class="mt-1 text-[11px] text-ink-500">Publish the post first – the link must work.</p>@endunless
+                @else
+                    <a href="{{ route('admin.settings.edit', ['tab' => 'instagram']) }}" class="btn-outline mt-2 !px-3 !py-1.5 text-xs">Add Facebook Page ID</a>
+                @endif
+            </div>
             @if($shares->isNotEmpty())
                 <ul class="mt-3 divide-y divide-ink-100 border-t border-ink-100 text-xs">
                     @foreach($shares as $share)
                         <li class="flex items-center gap-2 py-1.5">
                             <span class="{{ ['published' => 'badge-green', 'processing' => 'badge-blue', 'failed' => 'badge-red'][$share->status] ?? 'badge-gray' }}">{{ $share->status }}</span>
-                            <span class="text-ink-500">{{ $share->media_type }} · {{ $share->created_at->diffForHumans() }}</span>
+                            <span class="text-ink-500">{{ ucfirst($share->network) }} {{ $share->media_type }} · {{ $share->created_at->diffForHumans() }}</span>
                             @if($share->permalink)<a href="{{ $share->permalink }}" target="_blank" class="text-brand-600 underline">open</a>@endif
                             @if($share->status === 'processing')<button type="submit" form="form-share-check-{{ $share->id }}" class="text-brand-600 underline">check</button>@endif
                             @if($share->status === 'failed')<span class="truncate text-red-600" title="{{ $share->response }}">{{ \Illuminate\Support\Str::limit($share->response, 60) }}</span>@endif
@@ -316,6 +327,7 @@
     <form id="form-pull-content" method="post" action="{{ route('admin.posts.pull-content', $post) }}" class="hidden" data-confirm="Replace this post's content with the full article from the source page?">@csrf</form>
     <form id="form-index-request" method="post" action="{{ route('admin.posts.index-request', $post) }}" class="hidden">@csrf</form>
     <form id="form-instagram" method="post" action="{{ route('admin.posts.share.instagram', $post) }}" class="hidden">@csrf</form>
+    <form id="form-facebook" method="post" action="{{ route('admin.posts.share.facebook', $post) }}" class="hidden">@csrf</form>
     @foreach($shares as $share)<form id="form-share-check-{{ $share->id }}" method="post" action="{{ route('admin.shares.check', $share) }}" class="hidden">@csrf</form>@endforeach
 @endif
 @endsection

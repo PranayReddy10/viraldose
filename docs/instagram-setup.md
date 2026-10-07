@@ -25,7 +25,7 @@ About 20 minutes. Do every step on a computer, logged in to the Facebook account
      open **API setup with Facebook login** (not "with Instagram login" – the site talks to graph.facebook.com)
      → under Permissions click **Add** next to `instagram_basic` and `instagram_content_publish`.
    - **Use cases** → *Manage everything on your Page* → **Customize** → **Add** `pages_show_list`,
-     `pages_read_engagement` and `business_management`.
+     `pages_read_engagement`, `pages_manage_posts` (for the Facebook Page) and `business_management`.
    You can leave the app **Unpublished** (Development mode). App Review and "Publish" are not needed because
    you only post to your own account and you are the app's admin (App roles).
 
@@ -36,7 +36,7 @@ About 20 minutes. Do every step on a computer, logged in to the Facebook account
    2. **User or Page** → *Get User Access Token*.
    3. **Permissions** → remove anything else that is listed (e.g. `whatsapp_business_*`, click ✕) →
       *Add a permission* → add all of:
-      `instagram_basic`, `instagram_content_publish`, `pages_show_list`, `pages_read_engagement`, `business_management`.
+      `instagram_basic`, `instagram_content_publish`, `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `business_management`.
       If a permission is missing from the list, it is not on the app yet – go back to step 5.
       (If the panel only offers **Configurations**: Facebook Login for Business → Configurations → Create
       configuration → choose *User access token*, the five permissions and your Page + Instagram account →

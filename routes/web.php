@@ -76,6 +76,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('posts/{post}/inspect', [Admin\GoogleController::class, 'inspect'])->name('posts.inspect');
         Route::post('posts/{post}/request-indexing', [Admin\GoogleController::class, 'requestIndexing'])->name('posts.index-request');
         Route::post('posts/{post}/share/instagram', [Admin\SocialShareController::class, 'instagram'])->name('posts.share.instagram');
+        Route::post('posts/{post}/share/facebook', [Admin\SocialShareController::class, 'facebook'])->name('posts.share.facebook');
         Route::get('posts/{post}/share/card', [Admin\SocialShareController::class, 'card'])->name('posts.share.card');
         Route::post('reels/{reel}/share/instagram', [Admin\SocialShareController::class, 'reel'])->name('reels.share.instagram');
         Route::post('shares/{share}/check', [Admin\SocialShareController::class, 'check'])->name('shares.check');

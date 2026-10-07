@@ -3,7 +3,7 @@
 @section('content')
 @php
     $s = fn ($k) => old($k, $settings[$k] ?? '');
-    $tabs = ['general' => 'General', 'branding' => 'Branding', 'content' => 'Content', 'social' => 'Social', 'seo' => 'SEO', 'google' => 'Google & Indexing', 'instagram' => 'Instagram', 'reels' => 'Reels', 'ads' => 'Ads', 'storage' => 'Storage (DigitalOcean)', 'header' => 'Header Code', 'body' => 'Body Code'];
+    $tabs = ['general' => 'General', 'branding' => 'Branding', 'content' => 'Content', 'social' => 'Social', 'seo' => 'SEO', 'google' => 'Google & Indexing', 'instagram' => 'Instagram & Facebook', 'reels' => 'Reels', 'ads' => 'Ads', 'storage' => 'Storage (DigitalOcean)', 'header' => 'Header Code', 'body' => 'Body Code'];
 @endphp
 <form method="post" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data" data-tabs>
     @csrf @method('PUT')
@@ -139,6 +139,7 @@
                 @error('instagram_access_token')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
             </div>
             <x-admin.field label="Instagram username" name="instagram_username" :value="$s('instagram_username')" help="Shown on the generated card." />
+            <x-admin.field label="Facebook Page ID" name="facebook_page_id" :value="$s('facebook_page_id')" help="The Page's numeric id from me/accounts (the &quot;id&quot; next to the Page name, e.g. 1101904999669966). Uses the same access token – it needs the pages_manage_posts permission." />
             <div class="flex gap-2">
                 <button type="submit" class="btn-primary">Save</button>
                 @if($s('instagram_business_id'))<button type="submit" formaction="{{ route('admin.settings.test-instagram') }}" formmethod="post" formnovalidate class="btn-outline">Test connection</button>@endif
@@ -146,7 +147,7 @@
             <ol class="mt-5 list-decimal space-y-1 pl-5 text-xs text-ink-700">
                 <li>Switch the Instagram account to Business/Creator and link it to a Facebook Page.</li>
                 <li>developers.facebook.com → create an app with use cases <em>Manage messaging &amp; content on Instagram</em> + <em>Manage everything on your Page</em> → Customize → “API setup with Facebook login” → add the permissions below.</li>
-                <li>Graph API Explorer → permissions <code>instagram_basic, instagram_content_publish, pages_show_list, pages_read_engagement, business_management</code> → generate a user token → exchange for a long-lived token → get the <strong>Page access token</strong> (does not expire).</li>
+                <li>Graph API Explorer → permissions <code>instagram_basic, instagram_content_publish, pages_show_list, pages_read_engagement, pages_manage_posts, business_management</code> → generate a user token → exchange for a long-lived token → get the <strong>Page access token</strong> (does not expire).</li>
                 <li>With the long-lived token run <code>me/accounts?fields=name,access_token,instagram_business_account{id,username}</code> — copy <code>instagram_business_account.id</code> and the Page <code>access_token</code>.</li>
                 <li>Paste both values here and press Test connection. Images must be publicly reachable JPEGs — the app generates them automatically.</li>
             </ol>
@@ -155,6 +156,7 @@
         <div class="card p-6">
             <h2 class="mb-3 font-bold">Posting defaults</h2>
             <x-admin.checkbox label="Automatically post every newly published story to Instagram" name="instagram_auto_share" :checked="(bool) $s('instagram_auto_share')" help="Uses the generated news card. Otherwise editors click “Post to Instagram” on each story." />
+            <x-admin.checkbox label="Automatically post every newly published story to the Facebook Page" name="facebook_auto_share" :checked="(bool) $s('facebook_auto_share')" help="Same news card as Instagram, with a clickable “Read more” link and the post's hashtags." />
             <x-admin.field label="Caption template" name="instagram_caption_template" type="textarea" :rows="6" :value="str_replace('\\n', PHP_EOL, $s('instagram_caption_template'))" help="Placeholders: {title} {excerpt} {category} {url} {hashtags} – {hashtags} = the post's tags and category as hashtags, then the default hashtags below. Instagram does not make links clickable – keep “link in bio”." />
             <x-admin.field label="Default hashtags" name="instagram_hashtags" :value="$s('instagram_hashtags')" />
             <p class="text-xs text-ink-500">Card format: 1080×1350 JPEG with the featured image, category badge, headline and site name. Preview/download it from any post's Instagram box.</p>

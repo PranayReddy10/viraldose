@@ -407,4 +407,31 @@ class ReelsSocialAdsTest extends TestCase
         $this->artisan('social:process')->assertSuccessful();
         $this->assertSame(1, SocialShare::where('post_id', $scheduled->id)->count());
     }
+
+    public function test_facebook_page_card_post_manual_and_auto(): void
+    {
+        Storage::fake('public');
+        $this->connectInstagram();
+        Setting::setMany(['facebook_page_id' => '1101904999669966']);
+        Http::fake([
+            'graph.facebook.com/*/1101904999669966/photos' => Http::response(['id' => 'PH1', 'post_id' => '1101904999669966_777']),
+        ]);
+        $category = Category::factory()->create(['name' => 'India']);
+        $post = Post::factory()->create(['category_id' => $category->id, 'title' => 'Facebook test story', 'excerpt' => 'Short summary.']);
+
+        $this->actingAs($this->admin())->post("/admin/posts/{$post->id}/share/facebook")->assertRedirect()->assertSessionHas('status');
+        $share = SocialShare::where('network', 'facebook')->first();
+        $this->assertSame('published', $share->status);
+        $this->assertSame('https://www.facebook.com/1101904999669966_777', $share->permalink);
+        $this->assertStringContainsString('👉 Read more: '.$post->url(), $share->caption);
+        Http::assertSent(fn ($req) => str_ends_with($req->url(), '/photos') && str_contains($req['url'], '/uploads/social/'));
+
+        // Auto-share on publish (editor) and once only.
+        Setting::set('facebook_auto_share', 1);
+        $this->actingAs($this->admin())->post('/admin/posts', ['title' => 'Auto FB', 'category_id' => $category->id, 'status' => 'published', 'save_as' => 'publish'])->assertRedirect();
+        $auto = Post::where('title', 'Auto FB')->first();
+        $this->assertSame(1, SocialShare::where('network', 'facebook')->where('post_id', $auto->id)->count());
+        $this->artisan('social:process')->assertSuccessful();
+        $this->assertSame(1, SocialShare::where('network', 'facebook')->where('post_id', $auto->id)->count());
+    }
 }

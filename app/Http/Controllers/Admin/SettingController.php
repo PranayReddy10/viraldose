@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Services\FacebookPublisher;
 use App\Services\Google\GoogleClient;
 use App\Services\ImageService;
 use App\Services\IndexNow;
@@ -68,6 +69,8 @@ class SettingController extends Controller
             'instagram_access_token' => ['nullable', 'string', 'max:600'],
             'instagram_username' => ['nullable', 'string', 'max:60'],
             'instagram_auto_share' => ['nullable', 'boolean'],
+            'facebook_page_id' => ['nullable', 'string', 'max:40', 'regex:/^\d*$/'],
+            'facebook_auto_share' => ['nullable', 'boolean'],
             'instagram_hashtags' => ['nullable', 'string', 'max:600'],
             'instagram_caption_template' => ['nullable', 'string', 'max:2000'],
             'reels_enabled' => ['nullable', 'boolean'],
@@ -102,7 +105,7 @@ class SettingController extends Controller
             'publisher_logo' => ['nullable', 'image', 'max:1024'],
         ]);
 
-        foreach (['show_breaking_bar', 'comments_enabled', 'comments_auto_approve', 'google_auto_index', 'indexnow_enabled', 'ads_enabled', 'adsense_auto_ads', 'mobile_sticky_ad', 'instagram_auto_share', 'reels_enabled'] as $flag) {
+        foreach (['show_breaking_bar', 'comments_enabled', 'comments_auto_approve', 'google_auto_index', 'indexnow_enabled', 'ads_enabled', 'adsense_auto_ads', 'mobile_sticky_ad', 'instagram_auto_share', 'facebook_auto_share', 'reels_enabled'] as $flag) {
             $data[$flag] = $request->boolean($flag) ? 1 : 0;
         }
         unset($data['google_service_account'], $data['remove_google_service_account']);
@@ -155,8 +158,19 @@ class SettingController extends Controller
             return back()->withErrors(['instagram_business_id' => $e->getMessage()]);
         }
         Setting::set('instagram_username', $account['username']);
+        $message = 'Instagram connected: @'.$account['username'].($account['followers'] !== null ? ' ('.number_format($account['followers']).' followers)' : '');
 
-        return redirect()->route('admin.settings.edit', ['tab' => 'instagram'])->with('status', 'Instagram connected: @'.$account['username'].($account['followers'] !== null ? ' ('.number_format($account['followers']).' followers)' : ''));
+        $facebook = app(FacebookPublisher::class);
+        if ($facebook->isReady()) {
+            try {
+                $page = $facebook->page();
+                $message .= ' · Facebook Page: '.$page['name'].($page['followers'] !== null ? ' ('.number_format($page['followers']).' followers)' : '');
+            } catch (\Throwable $e) {
+                return redirect()->route('admin.settings.edit', ['tab' => 'instagram'])->with('status', $message)->withErrors(['facebook_page_id' => $e->getMessage()]);
+            }
+        }
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'instagram'])->with('status', $message);
     }
 
     /**

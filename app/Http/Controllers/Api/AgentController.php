@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Post;
 use App\Models\Tag;
 use App\Models\User;
+use App\Services\FacebookPublisher;
 use App\Services\HtmlSanitizer;
 use App\Services\ImageService;
 use App\Services\InstagramPublisher;
@@ -156,6 +157,7 @@ class AgentController extends Controller
             } catch (\Throwable) {
             }
             app(InstagramPublisher::class)->autoShare($post);
+            app(FacebookPublisher::class)->autoShare($post);
         }
         $seo = $this->seo->analyze($post);
 

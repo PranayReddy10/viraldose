@@ -11,6 +11,7 @@ use App\Models\PostImage;
 use App\Models\Setting;
 use App\Models\Tag;
 use App\Models\User;
+use App\Services\FacebookPublisher;
 use App\Services\FeedImporter;
 use App\Services\Google\GoogleClient;
 use App\Services\HtmlSanitizer;
@@ -304,7 +305,9 @@ class PostController extends Controller
             // Never block saving on a search-engine API hiccup; the log has the details.
         }
         if (! $wasPublished && $post->isPublished()) {
-            app(InstagramPublisher::class)->autoShare($post->fresh(['category', 'tags']));
+            $fresh = $post->fresh(['category', 'tags']);
+            app(InstagramPublisher::class)->autoShare($fresh);
+            app(FacebookPublisher::class)->autoShare($fresh);
         }
     }
 }

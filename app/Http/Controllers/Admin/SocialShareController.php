@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\Reel;
 use App\Models\SocialShare;
+use App\Services\FacebookPublisher;
 use App\Services\InstagramPublisher;
 use App\Services\ShareCardGenerator;
 use Illuminate\Http\Request;
@@ -52,6 +53,21 @@ class SocialShareController extends Controller
             'processing' => back()->with('status', 'Sent to Instagram – it is processing the video and will publish automatically within a few minutes.'),
             default => back()->withErrors(['instagram' => 'Instagram rejected the post: '.$share->response]),
         };
+    }
+
+    /** One click: post the news card to the Facebook Page with a clickable link. */
+    public function facebook(Request $request, Post $post, FacebookPublisher $facebook)
+    {
+        $data = $request->validate(['fb_caption' => ['nullable', 'string', 'max:5000']]);
+        abort_unless($request->user()->canManageAllPosts() || $post->user_id === $request->user()->id, 403);
+        if (! $facebook->isReady()) {
+            return back()->withErrors(['facebook' => 'Add the Facebook Page ID first (Settings → Instagram & Facebook).']);
+        }
+        $share = $facebook->share($post, $data['fb_caption'] ?? null);
+
+        return $share->status === 'published'
+            ? back()->with('status', 'Posted to Facebook: '.$share->permalink)
+            : back()->withErrors(['facebook' => 'Facebook rejected the post: '.$share->response]);
     }
 
     /**
