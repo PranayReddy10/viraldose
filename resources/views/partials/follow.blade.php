@@ -16,14 +16,19 @@
 @endphp
 @if($networks->isNotEmpty())
     @if($layout === 'banner')
-        <aside class="mt-8 rounded-lg border border-ink-100 bg-ink-100 p-5" aria-label="Follow {{ site_name() }}">
-            <p class="text-sm text-ink-700"><strong>Never miss a story.</strong> Follow {{ site_name() }} for breaking news and daily top stories.</p>
-            <div class="mt-3 flex flex-wrap gap-2">
-                @foreach($networks as $key => [$label, $bg, $icon])
-                    <a href="{{ setting($key) }}" target="_blank" rel="noopener nofollow" class="btn {{ $bg }} text-white !px-3 !py-1.5 text-sm"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{{ $icon }}"/></svg>{{ $label }}</a>
-                @endforeach
-            </div>
-        </aside>
+        {{-- Under each article: one clear call-to-action per channel (WhatsApp, then Instagram). --}}
+        @if(setting('whatsapp_url'))
+            <aside class="mt-8 flex flex-col gap-3 rounded-lg border border-green-200 bg-green-50 p-5 sm:flex-row sm:items-center sm:justify-between" aria-label="Follow on WhatsApp">
+                <p class="text-sm text-green-800"><strong>Get top news on WhatsApp.</strong> Follow the {{ site_name() }} channel for breaking updates – free, no spam.</p>
+                <a href="{{ setting('whatsapp_url') }}" target="_blank" rel="noopener nofollow" class="btn shrink-0 bg-[#25d366] text-white"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{{ $networks['whatsapp_url'][2] }}"/></svg>Follow on WhatsApp</a>
+            </aside>
+        @endif
+        @if(setting('instagram_url'))
+            <aside class="{{ setting('whatsapp_url') ? 'mt-4' : 'mt-8' }} flex flex-col gap-3 rounded-lg border p-5 sm:flex-row sm:items-center sm:justify-between" style="background:#fdf2f8;border-color:#fbcfe8" aria-label="Follow on Instagram">
+                <p class="text-sm" style="color:#9d174d"><strong>Catch the news in 30 seconds.</strong> Follow {{ '@'.ltrim(setting('instagram_username', 'viraldose_news'), '@') }} on Instagram for daily news cards and reels.</p>
+                <a href="{{ setting('instagram_url') }}" target="_blank" rel="noopener nofollow" class="btn shrink-0 bg-[#e1306c] text-white"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{{ $networks['instagram_url'][2] }}"/></svg>Follow on Instagram</a>
+            </aside>
+        @endif
     @else
         <section aria-label="Follow {{ site_name() }}">
             <h2 class="section-title">Follow Us</h2>

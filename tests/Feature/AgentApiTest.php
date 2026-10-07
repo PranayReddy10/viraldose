@@ -234,9 +234,9 @@ class AgentApiTest extends TestCase
         $this->assertStringStartsWith("*Surya Launched in Vizag*\n\nThe Navy got a new ship.", $text);
         $this->assertStringEndsWith($post->url(), $text);
 
-        $this->get($post->url())->assertOk()->assertDontSee('Never miss a story');
+        $this->get($post->url())->assertOk()->assertDontSee('Get top news on WhatsApp.');
         Setting::setMany(['whatsapp_url' => 'https://whatsapp.com/channel/ABC123', 'instagram_url' => 'https://instagram.com/viraldose_news']);
-        $this->get($post->url())->assertOk()->assertSee('Never miss a story')->assertSee('Follow Us')
+        $this->get($post->url())->assertOk()->assertSee('Get top news on WhatsApp.')->assertSee('Follow on Instagram')->assertSee('Follow Us')
             ->assertSee('whatsapp.com/channel/ABC123', false)->assertSee('instagram.com/viraldose_news', false);
 
         $admin = $this->admin();
