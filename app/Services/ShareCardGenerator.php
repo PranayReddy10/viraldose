@@ -132,7 +132,7 @@ class ShareCardGenerator
         if (preg_match('/-card\.(jpe?g|png|webp)$/i', $image)) {
             return true;
         }
-        if (preg_match('/-photo\.(jpe?g|png|webp)$/i', $image)) {
+        if (preg_match('/-(photo|ai)\.(jpe?g|png|webp)$/i', $image)) {
             return false;
         }
 

@@ -245,4 +245,26 @@ class AgentApiTest extends TestCase
         $this->actingAs($admin)->get("/admin/posts/{$post->id}/edit")->assertOk()->assertSee('Copy &amp; open channel', false)->assertSee('vdCopyAndOpen', false);
         $this->actingAs($admin)->get('/admin/posts')->assertOk()->assertSee('window.vdShareX', false);
     }
+
+    public function test_ai_illustration_is_stored_labelled_and_used_on_instagram_card(): void
+    {
+        Storage::fake('public');
+        $token = $this->token();
+        Category::factory()->create(['slug' => 'politics']);
+        $img = imagecreatetruecolor(1200, 675);
+        ob_start();
+        imagejpeg($img);
+        $jpg = base64_encode(ob_get_clean());
+
+        $res = $this->postJson('/api/agent/posts', [
+            'title' => 'Supreme Court Orders Fresh Polls in 50 Punjab Municipal Wards',
+            'category' => 'politics', 'content' => $this->body(),
+            'image_base64' => $jpg, 'image_kind' => 'ai',
+        ], ['Authorization' => "Bearer {$token}"])->assertCreated();
+
+        $post = Post::find($res->json('id'));
+        $this->assertSame('AI-generated illustration', $post->image_caption);
+        $this->assertMatchesRegularExpression('/-ai\.jpg$/', $post->image);
+        $this->assertFalse(ShareCardGenerator::isTextCard($post->image, $post));
+    }
 }

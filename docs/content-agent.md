@@ -37,7 +37,7 @@ POST body (JSON):
   "meta_keywords": "focus keyword, other keyword",
   "image_base64": "optional JPG/PNG/WebP, ≤ 5 MB (1200×675 recommended)",
   "image_alt": "describe the image",
-  "image_kind": "photo or card (default card)",
+  "image_kind": "photo, ai or card (default card) – ai = AI-generated illustration, captioned automatically",
   "image_caption": "Photo credit, e.g. Photo: Jane Doe / Wikimedia Commons, CC BY-SA 4.0"
 }
 ```

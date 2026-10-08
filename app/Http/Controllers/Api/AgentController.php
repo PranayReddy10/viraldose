@@ -95,7 +95,8 @@ class AgentController extends Controller
             'image_alt' => ['nullable', 'string', 'max:200'],
             'image_caption' => ['nullable', 'string', 'max:300'],
             // "photo" = a real, freely licensed photo (credit it in image_caption); "card" = generated headline card.
-            'image_kind' => ['nullable', 'in:photo,card'],
+            // "ai" = AI-generated illustration (always captioned as such on the site).
+            'image_kind' => ['nullable', 'in:photo,card,ai'],
             'language' => ['nullable', 'string', 'max:10'],
             // true = one of the day's top stories (any category); saved as a featured draft.
             'top' => ['nullable', 'boolean'],
@@ -133,7 +134,9 @@ class AgentController extends Controller
             'meta_description' => $data['meta_description'] ?? null,
             'meta_keywords' => $data['meta_keywords'] ?? null,
             'image_alt' => $data['image_alt'] ?? null,
-            'image_caption' => $data['image_caption'] ?? null,
+            'image_caption' => ($data['image_kind'] ?? null) === 'ai'
+                ? (str_contains(strtolower((string) ($data['image_caption'] ?? '')), 'ai-generated') ? $data['image_caption'] : 'AI-generated illustration')
+                : ($data['image_caption'] ?? null),
             'language' => $data['language'] ?? setting('language', 'en'),
             // Admin → Content Agent → "Publish directly" switches drafts to live posts.
             'status' => setting('agent_auto_publish') ? Post::STATUS_PUBLISHED : Post::STATUS_DRAFT,
@@ -192,7 +195,7 @@ class AgentController extends Controller
             throw ValidationException::withMessages(['image_base64' => 'Send a JPG, PNG or WebP image of at most 5 MB, base64-encoded.']);
         }
 
-        return $this->images->storeBytes('uploads/posts/'.date('Y/m').'/'.Str::limit($slug, 60, '').'-'.Str::random(6).'-'.($kind === 'photo' ? 'photo' : 'card').'.'.$ext, $bytes);
+        return $this->images->storeBytes('uploads/posts/'.date('Y/m').'/'.Str::limit($slug, 60, '').'-'.Str::random(6).'-'.(in_array($kind, ['photo', 'ai'], true) ? $kind : 'card').'.'.$ext, $bytes);
     }
 
     /** Keeps only links to this site (and relative links); other anchors become plain text. */
