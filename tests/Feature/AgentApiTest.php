@@ -7,11 +7,14 @@ use App\Models\Post;
 use App\Models\Redirect;
 use App\Models\Setting;
 use App\Models\Tag;
+use App\Services\AiImageGenerator;
 use App\Services\InstagramPublisher;
 use App\Services\ShareCardGenerator;
 use App\Support\WhatsAppShare;
 use App\Support\XShare;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -289,5 +292,79 @@ class AgentApiTest extends TestCase
         $this->assertSame('AI-generated illustration', $post->image_caption);
         $card = app(ShareCardGenerator::class)->generate($post);
         $this->assertStringContainsString('-thumb-', $card);
+    }
+
+    public function test_site_generates_ai_thumbnail_when_agent_sends_no_image(): void
+    {
+        Storage::fake('public');
+        $token = $this->token();
+        Category::factory()->create(['slug' => 'world', 'name' => 'World']);
+        $img = imagecreatetruecolor(1536, 1024);
+        ob_start();
+        imagejpeg($img);
+        $jpg = ob_get_clean();
+        Http::fake(['api.openai.com/*' => Http::response(['data' => [['b64_json' => base64_encode($jpg)]]])]);
+
+        // Off by default: no API call, no image.
+        $this->postJson('/api/agent/posts', ['title' => 'Oil Prices Climb After Gulf Shipping Disruption This Week', 'category' => 'world', 'content' => $this->body()],
+            ['Authorization' => "Bearer {$token}"])->assertCreated()->assertJsonPath('ai_image', null);
+        Http::assertNothingSent();
+
+        Setting::set('ai_images_enabled', 1);
+        Setting::set('openai_api_key', Crypt::encryptString('sk-test'));
+        $res = $this->postJson('/api/agent/posts', [
+            'title' => 'Tanker Hit by Projectiles Off Qatar Coast, Casualties Reported',
+            'category' => 'world', 'content' => $this->body(),
+            'image_prompt' => 'Oil tanker in the Gulf at dusk with a map of Qatar',
+        ], ['Authorization' => "Bearer {$token}"])->assertCreated()->assertJsonPath('ai_image', 'generated');
+
+        $post = Post::find($res->json('id'));
+        $this->assertMatchesRegularExpression('/-aitext\.jpg$/', $post->image);
+        $this->assertSame('AI-generated illustration', $post->image_caption);
+        Http::assertSent(function ($request) {
+            return $request->hasHeader('Authorization', 'Bearer sk-test')
+                && $request['model'] === 'gpt-image-1-mini'
+                && str_contains($request['prompt'], '"Tanker Hit by Projectiles Off Qatar Coast"')
+                && str_contains($request['prompt'], '"Casualties Reported"')
+                && str_contains($request['prompt'], 'map of Qatar')
+                && str_contains($request['prompt'], 'No identifiable faces');
+        });
+    }
+
+    public function test_ai_failure_still_creates_the_post(): void
+    {
+        $token = $this->token();
+        Category::factory()->create(['slug' => 'world']);
+        Setting::set('ai_images_enabled', 1);
+        Setting::set('openai_api_key', Crypt::encryptString('sk-test'));
+        Http::fake(['api.openai.com/*' => Http::response(['error' => ['message' => 'Billing hard limit reached']], 400)]);
+
+        $res = $this->postJson('/api/agent/posts', ['title' => 'Oil Prices Climb After Gulf Shipping Disruption This Week', 'category' => 'world', 'content' => $this->body()],
+            ['Authorization' => "Bearer {$token}"])->assertCreated();
+        $this->assertStringContainsString('Billing hard limit reached', $res->json('ai_image'));
+        $this->assertNull(Post::find($res->json('id'))->image);
+    }
+
+    public function test_headline_is_split_into_two_banner_lines(): void
+    {
+        $this->assertSame(['Asian Para Games 2026:', 'Pramod Bhagat, Bhavina Patel Named Flag Bearers'], AiImageGenerator::splitHeadline('Asian Para Games 2026: Pramod Bhagat, Bhavina Patel Named Flag Bearers'));
+        $this->assertSame(['Tanker Hit by Projectiles Off Qatar Coast', 'Casualties Reported'], AiImageGenerator::splitHeadline('Tanker Hit by Projectiles Off Qatar Coast, Casualties Reported'));
+        [$a, $b] = AiImageGenerator::splitHeadline('Supreme Court Orders Fresh Polls in 50 Punjab Municipal Wards');
+        $this->assertSame('Supreme Court Orders Fresh Polls in 50 Punjab Municipal Wards', $a.' '.$b);
+    }
+
+    public function test_openai_key_is_saved_encrypted_from_settings(): void
+    {
+        $admin = $this->admin();
+        $this->actingAs($admin)->get('/admin/settings?tab=ai')->assertOk()->assertSee('AI news thumbnails');
+        $settings = Setting::all_cached();
+        $payload = array_merge(array_map(fn ($v) => is_array($v) ? '' : $v, $settings), [
+            'tab' => 'ai', 'ai_images_enabled' => 1, 'openai_api_key' => 'sk-secret-123', 'ai_images_quality' => 'medium',
+        ]);
+        unset($payload['logo'], $payload['logo_dark'], $payload['favicon'], $payload['default_og_image'], $payload['publisher_logo']);
+        $this->actingAs($admin)->put('/admin/settings', $payload)->assertSessionHasNoErrors();
+        $this->assertNotSame('sk-secret-123', Setting::where('key', 'openai_api_key')->value('value'));
+        $this->assertSame('sk-secret-123', app(AiImageGenerator::class)->key());
+        $this->assertTrue(app(AiImageGenerator::class)->isReady());
     }
 }

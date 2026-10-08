@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Post;
 use App\Models\Tag;
 use App\Models\User;
+use App\Services\AiImageGenerator;
 use App\Services\FacebookPublisher;
 use App\Services\HtmlSanitizer;
 use App\Services\ImageService;
@@ -52,6 +53,9 @@ class AgentController extends Controller
                 'min_words' => self::MIN_WORDS,
                 'title' => '50-70 characters',
                 'meta_description' => '150-160 characters',
+                'image' => app(AiImageGenerator::class)->isReady()
+                    ? 'Send a real, freely licensed photo as image_base64 (image_kind=photo, credit in image_caption) when you have one. Otherwise leave image_base64 out and send image_prompt: one or two sentences describing a symbolic scene for the story (real place or landmark, objects, mood; no real people\'s faces, no gore). The site then draws a thumbnail with the headline.'
+                    : 'Send image_base64 (real photo with image_kind=photo, or a headline card).',
                 'links' => 'Only links to '.parse_url(url('/'), PHP_URL_HOST).' are kept; other links are removed.',
             ],
             'plan' => AgentPlan::progress(),
@@ -98,6 +102,8 @@ class AgentController extends Controller
             // "ai" = AI-generated illustration (always captioned as such on the site).
             // "ai_text" = AI news thumbnail that already shows the headline (not overlaid again on social cards).
             'image_kind' => ['nullable', 'in:photo,card,ai,ai_text'],
+            // No image_base64? The site draws an AI thumbnail (headline + this scene) when Settings → AI Images is on.
+            'image_prompt' => ['nullable', 'string', 'max:1000'],
             'language' => ['nullable', 'string', 'max:10'],
             // true = one of the day's top stories (any category); saved as a featured draft.
             'top' => ['nullable', 'boolean'],
@@ -148,8 +154,19 @@ class AgentController extends Controller
         ]);
         $post->user_id = $this->author()->id;
 
+        $aiImage = null;
         if (! empty($data['image_base64'])) {
             $post->image = $this->storeImage($data['image_base64'], $slug, $data['image_kind'] ?? 'card');
+        } elseif (app(AiImageGenerator::class)->isReady()) {
+            try {
+                $bytes = app(AiImageGenerator::class)->generate($data['title'], $data['image_prompt'] ?? null, $category->name);
+                $post->image = $this->images->storeBytes($this->imagePath($slug, 'ai_text', 'jpg'), $bytes);
+                $post->image_caption = 'AI-generated illustration';
+                $post->image_alt = $post->image_alt ?: Str::limit('Illustration: '.$data['title'], 200, '');
+                $aiImage = 'generated';
+            } catch (\Throwable $e) {
+                $aiImage = 'failed: '.Str::limit($e->getMessage(), 300);
+            }
         }
         $post->save();
         $post->tags()->sync(Tag::syncFromString(implode(',', $data['tags'] ?? [])));
@@ -171,6 +188,7 @@ class AgentController extends Controller
             'title' => $post->title,
             'slug' => $post->slug,
             'words' => $words,
+            'ai_image' => $aiImage,
             'edit_url' => route('admin.posts.edit', $post),
             'future_url' => $post->url(),
             'plan' => AgentPlan::progress(),
@@ -196,9 +214,15 @@ class AgentController extends Controller
             throw ValidationException::withMessages(['image_base64' => 'Send a JPG, PNG or WebP image of at most 5 MB, base64-encoded.']);
         }
 
-        return $this->images->storeBytes('uploads/posts/'.date('Y/m').'/'.Str::limit($slug, 60, '').'-'.Str::random(6).'-'.match ($kind) {
+        return $this->images->storeBytes($this->imagePath($slug, $kind, $ext), $bytes);
+    }
+
+    /** The suffix tells the share-card generator how to treat the image (photo, ai, aitext, card). */
+    private function imagePath(string $slug, string $kind, string $ext): string
+    {
+        return 'uploads/posts/'.date('Y/m').'/'.Str::limit($slug, 60, '').'-'.Str::random(6).'-'.match ($kind) {
             'photo' => 'photo', 'ai' => 'ai', 'ai_text' => 'aitext', default => 'card'
-        }.'.'.$ext, $bytes);
+        }.'.'.$ext;
     }
 
     /** Keeps only links to this site (and relative links); other anchors become plain text. */

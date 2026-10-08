@@ -11,6 +11,7 @@ use App\Models\PostImage;
 use App\Models\Setting;
 use App\Models\Tag;
 use App\Models\User;
+use App\Services\AiImageGenerator;
 use App\Services\FacebookPublisher;
 use App\Services\FeedImporter;
 use App\Services\Google\GoogleClient;
@@ -182,6 +183,27 @@ class PostController extends Controller
         return back()->with('status', 'Article content pulled from the source page'.($before ? ' and replaced the previous text.' : '.'));
     }
 
+    /** Replaces the featured image with an AI news thumbnail (headline + scene). */
+    public function aiImage(Request $request, Post $post, AiImageGenerator $ai)
+    {
+        $this->authorizePost($request, $post);
+        $scene = $request->validate(['ai_scene' => ['nullable', 'string', 'max:1000']])['ai_scene'] ?? null;
+        if (! $ai->isReady()) {
+            return back()->withErrors(['image' => 'Switch on AI images and add the OpenAI key under Settings → AI Images.']);
+        }
+        try {
+            $bytes = $ai->generate($post->title, $scene, $post->category?->name);
+        } catch (\Throwable $e) {
+            return back()->withErrors(['image' => $e->getMessage()]);
+        }
+        $post->image = $this->images->storeBytes('uploads/posts/'.date('Y/m').'/'.Str::limit($post->slug, 60, '').'-'.Str::random(6).'-aitext.jpg', $bytes);
+        $post->image_caption = 'AI-generated illustration';
+        $post->image_alt = $post->image_alt ?: Str::limit('Illustration: '.$post->title, 200, '');
+        $post->save();
+
+        return back()->with('status', 'AI image created and set as the featured image.');
+    }
+
     public function destroyImage(Request $request, PostImage $image)
     {
         $this->authorizePost($request, $image->post);
@@ -220,6 +242,7 @@ class PostController extends Controller
             'indexingLogs' => $post->exists ? $post->indexingLogs()->limit(8)->get() : collect(),
             'instagram' => app(InstagramPublisher::class),
             'shares' => $post->exists ? $post->socialShares()->limit(5)->get() : collect(),
+            'aiImages' => app(AiImageGenerator::class)->isReady(),
         ];
     }
 

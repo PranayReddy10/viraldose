@@ -279,6 +279,14 @@
             <x-admin.field label="Image Description (alt text)" name="image_alt" :value="$post->image_alt" :max="200" help="Describe the image for accessibility and Google Images." />
             <x-admin.field label="Caption" name="image_caption" :value="$post->image_caption" :max="300" />
             @if($post->image)<x-admin.checkbox label="Remove current image" name="remove_image" />@endif
+            @if($post->exists && $aiImages)
+                <div class="mt-3 rounded border border-ink-300/60 p-3">
+                    <p class="text-xs font-semibold">No photo? Make an AI news thumbnail</p>
+                    <input type="text" name="ai_scene" form="form-ai-image" maxlength="1000" class="input mt-2 !text-xs" placeholder="Optional scene, e.g. oil tanker in the Gulf at dusk, map of Qatar">
+                    <button type="submit" form="form-ai-image" class="btn-outline mt-2 !px-3 !py-1.5 text-xs">Generate AI image (headline + scene)</button>
+                    <p class="mt-1 text-xs text-ink-500">Save your edits first – this replaces the featured image (takes ~30 s).</p>
+                </div>
+            @endif
         </section>
 
         {{-- Additional images --}}
@@ -325,6 +333,7 @@
     {{-- Action forms live outside the main form; buttons in the Google card target them via form="…" --}}
     <form id="form-trash" method="post" action="{{ route('admin.posts.destroy', $post) }}" class="hidden" data-confirm="Move this post to trash?">@csrf @method('DELETE')</form>
     <form id="form-inspect" method="post" action="{{ route('admin.posts.inspect', $post) }}" class="hidden">@csrf</form>
+    <form id="form-ai-image" method="post" action="{{ route('admin.posts.ai-image', $post) }}" class="hidden" data-confirm="Replace the featured image with an AI-generated thumbnail?">@csrf</form>
     <form id="form-pull-content" method="post" action="{{ route('admin.posts.pull-content', $post) }}" class="hidden" data-confirm="Replace this post's content with the full article from the source page?">@csrf</form>
     <form id="form-index-request" method="post" action="{{ route('admin.posts.index-request', $post) }}" class="hidden">@csrf</form>
     <form id="form-instagram" method="post" action="{{ route('admin.posts.share.instagram', $post) }}" class="hidden">@csrf</form>

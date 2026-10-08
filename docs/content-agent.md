@@ -45,6 +45,17 @@ POST body (JSON):
 Rules enforced by the server: always saved as draft; at least 400 words; HTML is sanitised; links to other
 websites are turned into plain text; the same title/slug within 30 days returns `409`.
 
+## AI thumbnails (Settings → AI Images)
+
+Paste an OpenAI API key (stored encrypted) and tick *Generate AI images*. When the agent sends no
+`image_base64`, the site asks `gpt-image-1-mini` for a 1536×1024 news thumbnail: the headline in two
+coloured banners over the scene from `image_prompt` (or a symbolic scene for the story). The image is
+captioned "AI-generated illustration", saved as `…-aitext.jpg` and posted to Instagram/Facebook as is.
+Rules always added to the prompt: no real people's faces, no gore, no blame-assigning flags. If OpenAI
+fails (key, billing limit), the post is still created and the response's `ai_image` says why.
+Editors can also press **Generate AI image** under the featured image on any saved post.
+Set a monthly spending limit at platform.openai.com → Billing → Limits.
+
 ## Why the feeds and the Indexing API ping were turned off
 
 * RSS import copied other sites' articles. Google does not index copies, and a site full of them gets

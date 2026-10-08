@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Services\AiImageGenerator;
 use App\Services\FacebookPublisher;
 use App\Services\Google\GoogleClient;
 use App\Services\ImageService;
@@ -71,6 +72,9 @@ class SettingController extends Controller
             'instagram_auto_share' => ['nullable', 'boolean'],
             'facebook_page_id' => ['nullable', 'string', 'max:40', 'regex:/^\d*$/'],
             'facebook_auto_share' => ['nullable', 'boolean'],
+            'ai_images_enabled' => ['nullable', 'boolean'],
+            'openai_api_key' => ['nullable', 'string', 'max:300'],
+            'ai_images_quality' => ['nullable', 'in:low,medium,high'],
             'instagram_hashtags' => ['nullable', 'string', 'max:600'],
             'instagram_caption_template' => ['nullable', 'string', 'max:2000'],
             'reels_enabled' => ['nullable', 'boolean'],
@@ -105,7 +109,7 @@ class SettingController extends Controller
             'publisher_logo' => ['nullable', 'image', 'max:1024'],
         ]);
 
-        foreach (['show_breaking_bar', 'comments_enabled', 'comments_auto_approve', 'google_auto_index', 'indexnow_enabled', 'ads_enabled', 'adsense_auto_ads', 'mobile_sticky_ad', 'instagram_auto_share', 'facebook_auto_share', 'reels_enabled'] as $flag) {
+        foreach (['show_breaking_bar', 'comments_enabled', 'comments_auto_approve', 'google_auto_index', 'indexnow_enabled', 'ads_enabled', 'adsense_auto_ads', 'mobile_sticky_ad', 'instagram_auto_share', 'facebook_auto_share', 'reels_enabled', 'ai_images_enabled'] as $flag) {
             $data[$flag] = $request->boolean($flag) ? 1 : 0;
         }
         unset($data['google_service_account'], $data['remove_google_service_account']);
@@ -120,6 +124,12 @@ class SettingController extends Controller
             unset($data['instagram_access_token']);
         } else {
             $data['instagram_access_token'] = Crypt::encryptString(trim($data['instagram_access_token']));
+        }
+
+        if (blank($data['openai_api_key'] ?? null)) {
+            unset($data['openai_api_key']);
+        } else {
+            $data['openai_api_key'] = Crypt::encryptString(trim($data['openai_api_key']));
         }
 
         foreach (['logo', 'logo_dark', 'favicon', 'default_og_image', 'publisher_logo'] as $file) {
@@ -171,6 +181,20 @@ class SettingController extends Controller
         }
 
         return redirect()->route('admin.settings.edit', ['tab' => 'instagram'])->with('status', $message);
+    }
+
+    public function testOpenAi(AiImageGenerator $ai)
+    {
+        if ($ai->key() === '') {
+            return back()->withErrors(['openai_api_key' => 'Paste the OpenAI API key, save, then test.']);
+        }
+        try {
+            $ai->test();
+        } catch (\Throwable $e) {
+            return redirect()->route('admin.settings.edit', ['tab' => 'ai'])->withErrors(['openai_api_key' => $e->getMessage()]);
+        }
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'ai'])->with('status', 'OpenAI key works – '.AiImageGenerator::MODEL.' is available.'.($ai->isReady() ? '' : ' Tick “Generate AI images” and save to switch it on.'));
     }
 
     /**

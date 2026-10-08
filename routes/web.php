@@ -72,6 +72,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('posts', Admin\PostController::class)->except(['show']);
         Route::delete('post-images/{image}', [Admin\PostController::class, 'destroyImage'])->name('posts.images.destroy');
         Route::delete('post-files/{file}', [Admin\PostController::class, 'destroyFile'])->name('posts.files.destroy');
+        Route::post('posts/{post}/ai-image', [Admin\PostController::class, 'aiImage'])->name('posts.ai-image');
         Route::post('posts/{post}/pull-content', [Admin\PostController::class, 'pullContent'])->name('posts.pull-content');
         Route::post('posts/{post}/inspect', [Admin\GoogleController::class, 'inspect'])->name('posts.inspect');
         Route::post('posts/{post}/request-indexing', [Admin\GoogleController::class, 'requestIndexing'])->name('posts.index-request');
@@ -121,6 +122,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('settings', [Admin\SettingController::class, 'update'])->name('settings.update');
             // The test buttons live inside the settings form, which carries _method=PUT – accept both.
             Route::match(['post', 'put'], 'settings/test-storage', [Admin\SettingController::class, 'testStorage'])->name('settings.test-storage');
+            Route::match(['post', 'put'], 'settings/test-openai', [Admin\SettingController::class, 'testOpenAi'])->name('settings.test-openai');
             Route::match(['post', 'put'], 'settings/test-instagram', [Admin\SettingController::class, 'testInstagram'])->name('settings.test-instagram');
             Route::get('subscribers/export', [Admin\SubscriberController::class, 'export'])->name('subscribers.export');
             Route::resource('subscribers', Admin\SubscriberController::class)->only(['index', 'destroy']);

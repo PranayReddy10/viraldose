@@ -89,6 +89,10 @@ class Setting extends Model
             'instagram_auto_share' => 0,
             'instagram_hashtags' => '#viraldose #news #breakingnews #india',
             'instagram_caption_template' => "{title}\n\n{excerpt}\n\nRead the full story on viraldose.in (link in bio)\n\n{hashtags}",
+            // AI images
+            'ai_images_enabled' => 0,
+            'openai_api_key' => '',
+            'ai_images_quality' => 'medium',
             // Reels
             'reels_enabled' => 1,
             'reels_per_page' => 10,

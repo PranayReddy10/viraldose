@@ -3,7 +3,7 @@
 @section('content')
 @php
     $s = fn ($k) => old($k, $settings[$k] ?? '');
-    $tabs = ['general' => 'General', 'branding' => 'Branding', 'content' => 'Content', 'social' => 'Social', 'seo' => 'SEO', 'google' => 'Google & Indexing', 'instagram' => 'Instagram & Facebook', 'reels' => 'Reels', 'ads' => 'Ads', 'storage' => 'Storage (DigitalOcean)', 'header' => 'Header Code', 'body' => 'Body Code'];
+    $tabs = ['general' => 'General', 'branding' => 'Branding', 'content' => 'Content', 'social' => 'Social', 'seo' => 'SEO', 'google' => 'Google & Indexing', 'instagram' => 'Instagram & Facebook', 'ai' => 'AI Images', 'reels' => 'Reels', 'ads' => 'Ads', 'storage' => 'Storage (DigitalOcean)', 'header' => 'Header Code', 'body' => 'Body Code'];
 @endphp
 <form method="post" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data" data-tabs>
     @csrf @method('PUT')
@@ -160,6 +160,23 @@
             <x-admin.field label="Caption template" name="instagram_caption_template" type="textarea" :rows="6" :value="str_replace('\\n', PHP_EOL, $s('instagram_caption_template'))" help="Placeholders: {title} {excerpt} {category} {url} {hashtags} – {hashtags} = the post's tags and category as hashtags, then the default hashtags below. Instagram does not make links clickable – keep “link in bio”." />
             <x-admin.field label="Default hashtags" name="instagram_hashtags" :value="$s('instagram_hashtags')" />
             <p class="text-xs text-ink-500">Card format: 1080×1350 JPEG with the featured image, category badge, headline and site name. Preview/download it from any post's Instagram box.</p>
+        </div>
+    </div>
+
+    <div data-tab-panel="ai" class="{{ $tab === 'ai' ? '' : 'hidden' }} card max-w-3xl p-6">
+        <h2 class="font-bold">AI news thumbnails</h2>
+        <p class="mt-1 text-sm text-ink-500">When an agent article arrives without a real photo, the site asks OpenAI (<code>{{ \App\Services\AiImageGenerator::MODEL }}</code>) for a TV-news style thumbnail: the headline in coloured banners over a symbolic scene. It is captioned “AI-generated illustration” and also used for Instagram and Facebook. No real people's faces, no gore. About ₹1–4 per image (medium quality).</p>
+        <x-admin.checkbox label="Generate AI images for agent articles without a photo" name="ai_images_enabled" :checked="(bool) $s('ai_images_enabled')" />
+        <div class="mb-4">
+            <label class="label" for="f-openai_api_key">OpenAI API key</label>
+            <input id="f-openai_api_key" type="password" name="openai_api_key" class="input" placeholder="{{ ($settings['openai_api_key'] ?? '') ? '•••••••• (saved – leave blank to keep)' : 'sk-…' }}" autocomplete="new-password">
+            @error('openai_api_key')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+            <p class="mt-1 text-xs text-ink-500">Stored encrypted. Create it at platform.openai.com → API keys, and set a monthly spending limit under Billing → Limits.</p>
+        </div>
+        <x-admin.select label="Quality" name="ai_images_quality" :value="$s('ai_images_quality') ?: 'medium'" :options="['low' => 'Low (cheapest, text may be less sharp)', 'medium' => 'Medium (recommended)', 'high' => 'High (slowest, most expensive)']" />
+        <div class="flex gap-2">
+            <button type="submit" class="btn-primary">Save</button>
+            @if(($settings['openai_api_key'] ?? ''))<button type="submit" formaction="{{ route('admin.settings.test-openai') }}" formmethod="post" formnovalidate class="btn-outline">Test key</button>@endif
         </div>
     </div>
 
