@@ -21,6 +21,12 @@ class ShareCardGenerator
 
     public function generate(Post $post, bool $force = false): string
     {
+        // AI news thumbnails already carry the headline in the picture: post them as they are (fitted
+        // into 4:5 over a blurred copy) instead of printing the headline a second time.
+        if ($post->image && preg_match('/-aitext\.(jpe?g|png|webp)$/i', $post->image)) {
+            return $this->thumbnailCard($post, $force);
+        }
+
         $dir = 'uploads/social';
         $file = "{$dir}/post-{$post->id}-".substr(md5('v2'.$post->title.$post->image.$post->updated_at), 0, 8).'.jpg';
         $diskName = ImageService::uploadDisk();
@@ -132,7 +138,7 @@ class ShareCardGenerator
         if (preg_match('/-card\.(jpe?g|png|webp)$/i', $image)) {
             return true;
         }
-        if (preg_match('/-(photo|ai)\.(jpe?g|png|webp)$/i', $image)) {
+        if (preg_match('/-(photo|ai|aitext)\.(jpe?g|png|webp)$/i', $image)) {
             return false;
         }
 
@@ -186,6 +192,65 @@ class ShareCardGenerator
     public static function url(string $file): string
     {
         return ImageService::publicUrl($file);
+    }
+
+    /**
+     * 4:5 card for an AI news thumbnail that already shows the headline: the thumbnail full-width in
+     * the middle of a dark brand background, ViralDose logo and handle at the bottom.
+     */
+    private function thumbnailCard(Post $post, bool $force): string
+    {
+        $file = 'uploads/social/post-'.$post->id.'-thumb-'.substr(md5($post->image.$post->updated_at), 0, 8).'.jpg';
+        $diskName = ImageService::uploadDisk();
+        $disk = Storage::disk($diskName);
+        $reference = $diskName === ImageService::SPACES_DISK ? 'spaces://'.$file : $file;
+        if (! $force && $this->exists($disk, $file)) {
+            return $reference;
+        }
+        $img = $this->loadImage($post->image);
+        if (! $img) {
+            return $this->photoCard($post->image, 'post-'.$post->id.'-thumb', $force);
+        }
+
+        $w = self::WIDTH;
+        $h = self::HEIGHT;
+        $canvas = imagecreatetruecolor($w, $h);
+        for ($y = 0; $y < $h; $y++) {
+            $t = $y / $h;
+            imageline($canvas, 0, $y, $w, $y, imagecolorallocate($canvas, (int) (40 - 28 * $t), (int) (14 - 4 * $t), (int) (20 - 4 * $t)));
+        }
+        $red = imagecolorallocate($canvas, 220, 38, 38);
+        imagefilledrectangle($canvas, 0, 0, $w, 10, $red);
+
+        $iw = imagesx($img);
+        $ih = imagesy($img);
+        $th = (int) round($ih * $w / $iw);
+        $top = (int) max(60, ($h - 140 - $th) / 2);
+        imagecopyresampled($canvas, $img, 0, $top, 0, 0, $w, $th, $iw, $ih);
+        imagedestroy($img);
+
+        $pad = 64;
+        $footerY = $h - $pad;
+        $white = imagecolorallocate($canvas, 255, 255, 255);
+        $muted = imagecolorallocate($canvas, 220, 220, 225);
+        $logoFile = public_path('images/logo-white.png');
+        if (is_file($logoFile) && ($logo = @imagecreatefrompng($logoFile))) {
+            $lw = imagesx($logo);
+            $lh = imagesy($logo);
+            imagealphablending($canvas, true);
+            imagecopyresampled($canvas, $logo, $pad, $footerY - 56, 0, 0, (int) round($lw * 64 / $lh), 64, $lw, $lh);
+            imagedestroy($logo);
+        } else {
+            imagettftext($canvas, 30, 0, $pad, $footerY, $white, resource_path('fonts/DejaVuSans-Bold.ttf'), Str::upper(site_name()));
+        }
+        $handle = '@'.ltrim((string) setting('instagram_username', 'viraldose_news'), '@');
+        $regular = resource_path('fonts/DejaVuSans.ttf');
+        $hb = imagettfbbox(24, 0, $regular, $handle);
+        imagettftext($canvas, 24, 0, $w - $pad - abs($hb[2] - $hb[0]), $footerY, $muted, $regular, $handle);
+
+        $this->write($disk, $file, $canvas);
+
+        return $reference;
     }
 
     private function exists($disk, string $file): bool

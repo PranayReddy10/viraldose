@@ -96,7 +96,8 @@ class AgentController extends Controller
             'image_caption' => ['nullable', 'string', 'max:300'],
             // "photo" = a real, freely licensed photo (credit it in image_caption); "card" = generated headline card.
             // "ai" = AI-generated illustration (always captioned as such on the site).
-            'image_kind' => ['nullable', 'in:photo,card,ai'],
+            // "ai_text" = AI news thumbnail that already shows the headline (not overlaid again on social cards).
+            'image_kind' => ['nullable', 'in:photo,card,ai,ai_text'],
             'language' => ['nullable', 'string', 'max:10'],
             // true = one of the day's top stories (any category); saved as a featured draft.
             'top' => ['nullable', 'boolean'],
@@ -134,7 +135,7 @@ class AgentController extends Controller
             'meta_description' => $data['meta_description'] ?? null,
             'meta_keywords' => $data['meta_keywords'] ?? null,
             'image_alt' => $data['image_alt'] ?? null,
-            'image_caption' => ($data['image_kind'] ?? null) === 'ai'
+            'image_caption' => in_array($data['image_kind'] ?? null, ['ai', 'ai_text'], true)
                 ? (str_contains(strtolower((string) ($data['image_caption'] ?? '')), 'ai-generated') ? $data['image_caption'] : 'AI-generated illustration')
                 : ($data['image_caption'] ?? null),
             'language' => $data['language'] ?? setting('language', 'en'),
@@ -195,7 +196,9 @@ class AgentController extends Controller
             throw ValidationException::withMessages(['image_base64' => 'Send a JPG, PNG or WebP image of at most 5 MB, base64-encoded.']);
         }
 
-        return $this->images->storeBytes('uploads/posts/'.date('Y/m').'/'.Str::limit($slug, 60, '').'-'.Str::random(6).'-'.(in_array($kind, ['photo', 'ai'], true) ? $kind : 'card').'.'.$ext, $bytes);
+        return $this->images->storeBytes('uploads/posts/'.date('Y/m').'/'.Str::limit($slug, 60, '').'-'.Str::random(6).'-'.match ($kind) {
+            'photo' => 'photo', 'ai' => 'ai', 'ai_text' => 'aitext', default => 'card'
+        }.'.'.$ext, $bytes);
     }
 
     /** Keeps only links to this site (and relative links); other anchors become plain text. */

@@ -267,4 +267,27 @@ class AgentApiTest extends TestCase
         $this->assertMatchesRegularExpression('/-ai\.jpg$/', $post->image);
         $this->assertFalse(ShareCardGenerator::isTextCard($post->image, $post));
     }
+
+    public function test_ai_thumbnail_with_headline_is_posted_as_is_on_social_cards(): void
+    {
+        Storage::fake('public');
+        $token = $this->token();
+        Category::factory()->create(['slug' => 'politics']);
+        $img = imagecreatetruecolor(1536, 1024);
+        ob_start();
+        imagejpeg($img);
+        $jpg = base64_encode(ob_get_clean());
+
+        $res = $this->postJson('/api/agent/posts', [
+            'title' => 'Supreme Court Orders Fresh Polls in 50 Punjab Municipal Wards',
+            'category' => 'politics', 'content' => $this->body(),
+            'image_base64' => $jpg, 'image_kind' => 'ai_text',
+        ], ['Authorization' => "Bearer {$token}"])->assertCreated();
+
+        $post = Post::find($res->json('id'))->load('category');
+        $this->assertMatchesRegularExpression('/-aitext\.jpg$/', $post->image);
+        $this->assertSame('AI-generated illustration', $post->image_caption);
+        $card = app(ShareCardGenerator::class)->generate($post);
+        $this->assertStringContainsString('-thumb-', $card);
+    }
 }
